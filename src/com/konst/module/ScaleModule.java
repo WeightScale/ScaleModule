@@ -584,8 +584,10 @@ public abstract class ScaleModule extends Handler {
         private class MeasureBatteryTemperature extends Thread {
             private boolean start;
             private boolean cancelled;
-            private int autoNull;                                                                                       //счётчик автообнуления
-            public int timeUpdate = 1;                                                                                  /* Время обновления в секундах*/
+            /** счётчик автообнуления */
+            private int autoNull;
+            /** Время обновления в секундах*/
+            public int timeUpdate = 1;
 
             @Override
             public synchronized void start() {
@@ -628,6 +630,10 @@ public abstract class ScaleModule extends Handler {
                 return start;
             }
 
+            private void resetNull(){
+                autoNull = 0;
+            }
+
         }
         /** Метод запускает или останавливает процесс измерения
          * @param process true запускаем процесс false останавливаем
@@ -650,6 +656,10 @@ public abstract class ScaleModule extends Handler {
 
             } catch (Exception e) {
             }
+        }
+
+        public void resetAutoNull(){
+            measureBatteryTemperature.resetNull();
         }
     }
 
