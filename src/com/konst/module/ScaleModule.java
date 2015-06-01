@@ -506,8 +506,6 @@ public abstract class ScaleModule extends Handler {
         return device.getAddress();
     }
 
-
-
     public static int getMarginTenzo() {
         return Versions.getMarginTenzo();
     }
@@ -555,7 +553,7 @@ public abstract class ScaleModule extends Handler {
                     }catch (Versions.ErrorTerminalException e){
                         handleConnectError(Error.TERMINAL_ERROR, e.getMessage());
                     }catch (Exception e){
-                        handleConnectError(Error.CONNECT_ERROR, e.getMessage());
+                        handleConnectError(Error.MODULE_ERROR, e.getMessage());
                     }
                 } else {
                     disconnect();

@@ -7,15 +7,18 @@ import java.io.IOException;
  * @author Kostya
  */
 public abstract class BootModule extends ScaleModule {
-    String version;
+    String version = "";
+
+    public BootModule(String version){
+        this.version = version;
+    }
 
     /** Инициализация соединения с будлодером.
      * Перед инициализациеи надо создать класс com.kostya.module.BootModule
      * @param bootVersion Имя будлодера для синхронизации с весовым модулем.
-     * @param address адресс bluetooth модуля весов.
-     * @throws Exception неправильный формат адреса bluetooth*/
+     * @param address адресс bluetooth модуля весов.*/
     @Override
-    public void init(String bootVersion, String address) throws Exception {
+    public void init(String bootVersion, String address)  {
         version = bootVersion;
         device = bluetoothAdapter.getRemoteDevice(address);
         attachBoot();
@@ -39,6 +42,34 @@ public abstract class BootModule extends ScaleModule {
         t.start();
     }
 
+    /** Комманда старт программирования.
+     * @return true - Запущено программирование.
+     */
+    public boolean start(){   return cmd("STR").equals("STR"); }
 
+    /** Получить код микросхемы.
+     * @return Код в текстовом виде.
+     */
+    public String getPartCode(){  return cmd("PRC"); }
+
+    /** Получить версию железа.
+     * @return Версия в текстовом виде.
+     */
+    public String getHardware(){  return cmd("HRW");  }
+
+    /** Получить версию загрузчика.
+     * @return Номер версии.
+     */
+    public int getBootVersion(){
+        String vrs = cmd("VRS");
+        if (vrs.startsWith(this.version)) {
+            try {
+                return Integer.valueOf(vrs.replace(this.version, ""));
+            } catch (Exception e) {
+                return 0;
+            }
+        }
+        return 0;
+    }
 
 }
