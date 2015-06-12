@@ -50,7 +50,7 @@ class V4 extends Versions {
 
     @Override
     protected synchronized boolean setOffsetScale() { //обнуление
-        return ScaleModule.setModuleOffsetSensor();
+        return Module.cmd(CMD_SET_OFFSET).equals(CMD_SET_OFFSET);
     }
 
     @Override

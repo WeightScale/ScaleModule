@@ -9,7 +9,7 @@ import java.util.Set;
  * Общий класс для всех версий весовых модулей
  * @author Kostya
  */
-abstract class Versions {
+abstract class Versions implements InterfaceVersions{
 
     /**время выключения весов*/
     public static int timeOff;
@@ -49,12 +49,6 @@ abstract class Versions {
     /** номер телефона админа в формате +38хххххххххх*/
     public static String phone = "";
 
-    /** Получаем значение установленого фильтра в АЦП
-     * @return значение от 1 до 15
-     */
-    private static String getFilterADC() {
-        return ScaleModule.cmd(InterfaceVersions.CMD_FILTER);
-    }
     /** Загружаем значения из весового модуля
      * @throws Exception Ошибки при загрузке настроек из весового модуля*/
     protected abstract void load() throws Exception;
@@ -65,16 +59,16 @@ abstract class Versions {
      * @return true если значения равно лимиту  датчика */
     protected abstract boolean isLimit();
     /** Определяем значения перезруза датчика веса
-     * @return true если значение равно перегрузу*/
+     * @return true если значение равно перегрузу */
     protected abstract boolean isMargin();
     /** Получаем новое значение датчика и преобразуем в вес
-     * @return значение веса*/
+     * @return значение веса */
     protected abstract int updateWeight();
     /** устанавливаем весы в ноль
-     * @return true Установлен ноль в весовом модуле*/
+     * @return true Установлен ноль в весовом модуле */
     protected abstract boolean setScaleNull();
     /** Записывем данные в весовой модуль
-     * @return true значения записаны*/
+     * @return true значения записаны */
     protected abstract boolean writeData();
 
     protected abstract int getSensorTenzo();
@@ -87,10 +81,14 @@ abstract class Versions {
 
     protected abstract boolean setPhone(String phone);
 
+    /** Получаем значение установленого фильтра в АЦП
+     * @return значение от 1 до 15 */
+    private static String getFilterADC() { return ScaleModule.cmd(CMD_FILTER); }
+
     protected void loadFilterADC() throws Exception {
         filterADC = Integer.valueOf(getFilterADC());
-        if (filterADC < 0 || filterADC > InterfaceVersions.MAX_ADC_FILTER) {
-            if (!ScaleModule.setModuleFilterADC(InterfaceVersions.DEFAULT_ADC_FILTER))
+        if (filterADC < 0 || filterADC > MAX_ADC_FILTER) {
+            if (!ScaleModule.setModuleFilterADC(DEFAULT_ADC_FILTER))
                 throw new ErrorModuleException("Фильтер АЦП не установлен в настройках");
             filterADC = InterfaceVersions.DEFAULT_ADC_FILTER;
         }
@@ -98,8 +96,8 @@ abstract class Versions {
 
     protected void loadTimeOff() throws Exception {
         timeOff = Integer.valueOf(ScaleModule.getModuleTimeOff());
-        if (timeOff < InterfaceVersions.MIN_TIME_OFF || timeOff > InterfaceVersions.MAX_TIME_OFF) {
-            if (!ScaleModule.setModuleTimeOff(InterfaceVersions.MIN_TIME_OFF))
+        if (timeOff < InterfaceVersions.MIN_TIME_OFF || timeOff > MAX_TIME_OFF) {
+            if (!ScaleModule.setModuleTimeOff(MIN_TIME_OFF))
                 throw new ErrorModuleException("Таймер выключения не установлен в настройках");
             timeOff = InterfaceVersions.MIN_TIME_OFF;
         }
@@ -114,11 +112,7 @@ abstract class Versions {
         }
     }
 
-
-
-    protected static int getMarginTenzo() {
-        return marginTenzo;
-    }
+    protected static int getMarginTenzo() { return marginTenzo; }
 
     protected static class ErrorTerminalException extends Exception{
 

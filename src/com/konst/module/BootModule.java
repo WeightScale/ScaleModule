@@ -6,7 +6,7 @@ import java.io.IOException;
  * Класс для самопрограммирования весового модуля
  * @author Kostya
  */
-public abstract class BootModule extends ScaleModule {
+public abstract class BootModule extends Module {
     String version = "";
 
     /** Конструктор модуля бутлодера.
@@ -20,30 +20,34 @@ public abstract class BootModule extends ScaleModule {
      * Перед инициализациеи надо создать класс com.kostya.module.BootModule
      * @param bootVersion Имя будлодера для синхронизации с весовым модулем.
      * @param address адресс bluetooth модуля весов.*/
-    @Override
-    public void init(String bootVersion, String address)  {
+    public void init(String bootVersion, String address) throws Exception {
+        init(address);
         version = bootVersion;
-        device = bluetoothAdapter.getRemoteDevice(address);
-        attachBoot();
+        attach();
     }
 
-    private void attachBoot() /*throws Throwable*/ {
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    connect();
-                    handleResultConnect(ResultConnect.STATUS_LOAD_OK);
-                } catch (IOException e) {
-                    handleConnectError(Error.CONNECT_ERROR, e.getMessage());
-                }
-                handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
-            }
-        });
-
+    private void attach() /*throws Throwable*/ {
         handleResultConnect(ResultConnect.STATUS_ATTACH_START);
-        t.start();
+        new Thread(runnableBootConnect).start();
     }
+
+    public void dettach(){
+        removeCallbacksAndMessages(null);
+        disconnect();
+    }
+
+    Runnable runnableBootConnect = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                connect();
+                handleResultConnect(ResultConnect.STATUS_LOAD_OK);
+            } catch (IOException e) {
+                handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
+            }
+            handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
+        }
+    };
 
     /** Комманда старт программирования.
      * @return true - Запущено программирование.

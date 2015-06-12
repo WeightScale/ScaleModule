@@ -17,36 +17,17 @@ import java.util.concurrent.TimeUnit;
  * scaleModule.init("version", "bluetooth");
  * @author Kostya
  */
-//@TargetApi(Build.VERSION_CODES.ECLAIR)
-public abstract class ScaleModule extends Handler {
+public abstract class ScaleModule extends Module {
+    protected static Versions version;
+    /** Процент батареи (0-100%) */
+    protected static int battery;
+    /** Погрешность веса автоноль */
+    protected static int weightError;
+    /** Время срабатывания авто нуля */
+    protected static int timerNull;
+    private static int numVersion;
+    private static String versionName;
 
-    protected static BluetoothDevice device;
-    protected static final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-    protected static BluetoothSocket socket;
-    private static OutputStream os;
-    private static InputStream is;
-    /** Константа время задержки для получения байта */
-    static final int TIMEOUT_GET_BYTE = 2000;
-    /** Константы результат соединения */
-    public enum ResultConnect {
-        /**Соединение и загрузка данных из весового модуля успешно*/
-        STATUS_LOAD_OK,
-        /** Неизвесная вервия весового модуля */
-        STATUS_SCALE_UNKNOWN,
-        /** Конец стадии присоединения (можно использовать для закрытия прогресс диалога) */
-        STATUS_ATTACH_FINISH,
-        /** Начало стадии присоединения (можно использовать для открытия прогресс диалога) */
-        STATUS_ATTACH_START
-    }
-    /** Константы ошибок соединения */
-    public enum Error{
-        /** Ошибка настриек терминала */
-        TERMINAL_ERROR,
-        /** Ошибка настроек весового модуля */
-        MODULE_ERROR,
-        /** Ошибка соединения с модулем */
-        CONNECT_ERROR
-    }
     /** Константы результата взвешивания */
     public enum ResultWeight {
         /** Значение веса неправильное */
@@ -59,15 +40,10 @@ public abstract class ScaleModule extends Handler {
         WEIGHT_MARGIN
     }
 
-    private static String version;
-    private static int numVersion;
-
     /** Получаем класс загруженой версии весового модуля
      * @return класс версии весового модуля
      */
-    public static Versions getVersion() { return Version; }
-    protected static Versions Version;
-
+    public static Versions getVersion() { return version; }
     /** Получаем заряд батареи раннее загруженый в процентах
      * @return заряд батареи в процентах
      */
@@ -75,9 +51,6 @@ public abstract class ScaleModule extends Handler {
     /** Меняем ранне полученое значение заряда батареи весового модуля
      * @param battery Заряд батареи в процентах*/
     public static void setBattery(int battery) { ScaleModule.battery = battery; }
-    /** Процент батареи (0-100%) */
-    protected static int battery;
-
     /** Получаем значение веса погрешности для расчета атоноль
      * @return возвращяет значение веса
      */
@@ -85,9 +58,6 @@ public abstract class ScaleModule extends Handler {
     /** Сохраняем значение веса погрешности для расчета автоноль
      * @param weightError Значение погрешности в килограмах */
     public static void setWeightError(int weightError) { ScaleModule.weightError = weightError;  }
-    /** Погрешность веса автоноль */
-    protected static int weightError;
-
     /** Время для срабатывания автоноль
      * @return возвращяем время после которого установливается автоноль
      */
@@ -95,73 +65,66 @@ public abstract class ScaleModule extends Handler {
     /** Устонавливаем значение времени после которого срабатывает автоноль
      * @param timerNull Значение времени в секундах*/
     public static void setTimerNull(int timerNull) { ScaleModule.timerNull = timerNull; }
-    /** Время срабатывания авто нуля */
-    protected static int timerNull;
-
-
-    /** Сообщения о результате соединения.
-     * Используется после вызова метода init()
-     * @param what Результат соединения константа ResultConnect*/
-    public abstract void handleResultConnect(ResultConnect what);
-    /** Сообщения об ошибках соединения. Используется после вызоа метода init()
-     * @param what Результат какая ошибака константа Error
-     * @param error описание ошибки*/
-    public abstract void handleConnectError(Error what, String error);
     /** Инициализация и соединение с весовым модулем. Перед инициализациеи надо создать
      *  класс com.kostya.module.ScaleModule
      * @param moduleVersion Версия модуля для соединения
      * @param device bluetooth устройство*/
     public void init(String moduleVersion, BluetoothDevice device){
-        version = moduleVersion;
-        this.device = device;
-        attach();
+        init(device);
+        setup(moduleVersion);
     }
     /** Инициализация и соединение с весовым модулем.
      * Перед инициализациеи надо создать класс com.kostya.module.ScaleModule
      * @param moduleVersion Версия модуля для соединения
      * @param address адресс bluetooth устройства*/
     public void init(String moduleVersion, String address) throws Exception {
-        version = moduleVersion;
-        device = bluetoothAdapter.getRemoteDevice(address);
+        init(address);
+        setup(moduleVersion);
+    }
+
+    private void setup(String v){
+        versionName = v;
         attach();
     }
-    /** Отсоединение сесового модуля.
+    /** Отсоединение весового модуля.
      * Необходимо использовать перед закрытием программы чтобы остановить работающие процессы */
     public void dettach() {
         if (isAttach()) {
-            try {
-                if (HandlerBatteryTemperature.measureBatteryTemperature != null) {
-                    HandlerBatteryTemperature.measureBatteryTemperature.execute(false);
-                    while (HandlerBatteryTemperature.measureBatteryTemperature.isStart()) ;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (HandlerBatteryTemperature.measureBatteryTemperature != null) {
+                            HandlerBatteryTemperature.measureBatteryTemperature.execute(false);
+                            while (HandlerBatteryTemperature.measureBatteryTemperature.isStart()) ;
+                        }
+                        if (HandlerWeight.measureWeight != null) {
+                            HandlerWeight.measureWeight.execute(false);
+                            while (HandlerWeight.measureWeight.isStart()) ;
+                        }
+                    } catch (Exception e) { }
                 }
-                if (HandlerWeight.measureWeight != null) {
-                    HandlerWeight.measureWeight.execute(false);
-                    while (HandlerWeight.measureWeight.isStart()) ;
-                }
-            } catch (Exception e) {
-            }
+            }).start();
         }
 
         removeCallbacksAndMessages(null);
         disconnect();
+        version = null;
     }
-
     /** Прверяем если весовой модуль присоеденен.
      * @return true если было присоединение и загрузка версии весового модуля
      */
-    public static boolean isAttach() {
-        return Version != null;
-    }
+    public static boolean isAttach() { return version != null; }
     /** Определяем после соединения это весовой модуль и какой версии
      * указаной при инициализации класса com.kostya.module.ScaleModule.
      * @return true версия правильная
      * */
     public static boolean isScales() {
         String vrs = cmd(InterfaceVersions.CMD_VERSION); //Получаем версию весов
-        if (vrs.startsWith(version)) {
+        if (vrs.startsWith(versionName)) {
             try {
-                numVersion = Integer.valueOf(vrs.replace(version, ""));
-                Version = selectVersion(numVersion);
+                numVersion = Integer.valueOf(vrs.replace(versionName, ""));
+                version = fetchVersion(numVersion);
             } catch (Exception e) {
                 return false;
             }
@@ -171,141 +134,11 @@ public abstract class ScaleModule extends Handler {
     }
 
     private void attach() {
-        //final Throwable[] initException = {null};
         handleResultConnect(ResultConnect.STATUS_ATTACH_START);
-        new ConnectThread().start();
-        /*t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread thread, Throwable ex) {
-                //initException[0] = ex.getCause();
-                handleModuleConnectError(HandlerScaleConnect.Result.STATUS_CONNECT_ERROR, ex.getCause().getMessage());
-                handleConnectFinish();
-            }
-        });*/
-
-        //obtainMessage(Result.STATUS_ATTACH_START.ordinal(), device.getName()).sendToTarget();
-        //t.join();
-        //if (initException[0] != null)
-        //    throw initException[0];
-
+        new Thread(runnableScaleConnect).start();
     }
 
-    protected static synchronized void connect() throws IOException { //соединиться с весами
-        disconnect();
-        // Get a BluetoothSocket for a connection with the given BluetoothDevice
-        socket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
-        bluetoothAdapter.cancelDiscovery();
-        socket.connect();
-        is = socket.getInputStream();
-        os = socket.getOutputStream();
-    }
-
-    protected static void disconnect() { //рассоединиться
-        try {
-            if (socket != null)
-                socket.close();
-            if (is != null)
-                is.close();
-            if (os != null)
-                os.close();
-        } catch (IOException ioe) {
-            socket = null;
-            //return;
-        }
-        is = null;
-        os = null;
-        socket = null;
-    }
-
-    protected static synchronized String cmd(String cmd) { //послать команду и получить ответ
-        try {
-            synchronized (ScaleModule.class) {
-                int t = is.available();
-                if (t > 0) {
-                    is.read(new byte[t]);
-                }
-
-                sendCommand(cmd);
-                StringBuilder response = new StringBuilder();
-
-                for (int i = 0; i < 400 && response.length() < 129; ++i) {
-                    Thread.sleep(1L);
-                    if (is.available() > 0) {
-                        i = 0;
-                        char ch = (char) is.read();
-                        if (ch == '\uffff') {
-                            connect();
-                            break;
-                        }
-                        if (ch == '\r')
-                            continue;
-                        if (ch == '\n')
-                            if (response.toString().startsWith(cmd.substring(0, 3)))
-                                return response.replace(0, 3, "").toString().isEmpty() ? cmd.substring(0, 3) : response.toString();
-                            else
-                                return "";
-
-                        response.append(ch);
-                    }
-                }
-            }
-
-        } catch (IOException | InterruptedException ioe) {
-        }
-
-        try {
-            connect();
-        } catch (IOException e) {
-        }
-        return "";
-    }
-
-    private static synchronized void sendCommand(String cmd) throws IOException {
-        os.write(cmd.getBytes());
-        os.write((byte) 0x0D);
-        os.write((byte) 0x0A);
-        os.flush(); //что этот метод делает?
-    }
-
-    public static synchronized boolean sendByte(byte ch) {
-        try {
-            int t = is.available();
-            if (t > 0) {
-                is.read(new byte[t]);
-            }
-            os.write(ch);
-            os.flush(); //что этот метод делает?
-            return true;
-        } catch (IOException ioe) {
-        }
-        try {
-            connect();
-        } catch (IOException e) {
-        }
-        return false;
-    }
-
-    public static synchronized int getByte() {
-
-        try {
-            for (int i = 0; i < TIMEOUT_GET_BYTE; i++) {
-                if (is.available() > 0) {
-                    return is.read(); //временный символ (байт)
-                }
-                Thread.sleep(1);
-            }
-            return 0;
-        } catch (IOException | InterruptedException ioe) {
-        }
-
-        try {
-            connect();
-        } catch (IOException e) {
-        }
-        return 0;
-    }
-
-    private static Versions selectVersion(int version) throws Exception {
+    private static Versions fetchVersion(int version) throws Exception {
         switch (version) {
             case 1:
                 return new V1();
@@ -317,11 +150,6 @@ public abstract class ScaleModule extends Handler {
     }
 
     //==================================================================================================================
-    /** Получаем версию весов из весового модуля
-     * @return Версию весового модуля в текстовом виде*/
-    public static String getModuleVersion() {
-        return cmd(InterfaceVersions.CMD_VERSION);
-    }
     /** Установливаем новое значение АЦП в весовом модуле. Знчение от1 до 15
      * @param  filterADC Значение АЦП от 1 до 15
      * @return true Значение установлено*/
@@ -339,7 +167,6 @@ public abstract class ScaleModule extends Handler {
     public static boolean setModuleTimeOff(int timeOff) {
         return cmd(InterfaceVersions.CMD_TIMER + timeOff).equals(InterfaceVersions.CMD_TIMER);
     }
-
     /** Получаем значение скорости порта bluetooth модуля обмена данными.
      *  Значение от 1 до 5.
      *  1 - 9600bps.
@@ -352,7 +179,6 @@ public abstract class ScaleModule extends Handler {
     public static String getModuleSpeedPort() {
         return cmd(InterfaceVersions.CMD_SPEED);
     }
-
     /** Устанавливаем скорость порта обмена данными bluetooth модуля.
      *  Значение от 1 до 5.
      *  1 - 9600bps.
@@ -371,11 +197,7 @@ public abstract class ScaleModule extends Handler {
         return cmd(InterfaceVersions.CMD_GET_OFFSET);
     }
 
-    public static boolean setModuleOffsetSensor() {
-        return cmd(InterfaceVersions.CMD_SET_OFFSET).equals(InterfaceVersions.CMD_SET_OFFSET);
-    }
-
-    public static String getModuleSensor() {
+    public static String feelWeightSensor() {
         return cmd(InterfaceVersions.CMD_SENSOR);
     }
 
@@ -430,25 +252,24 @@ public abstract class ScaleModule extends Handler {
      * @param sheet Имя таблици.
      * @return true - Имя записано успешно.*/
     public static boolean setModuleSpreadsheet(String sheet) {
-        return Version.setSpreadsheet(sheet);
+        return version.setSpreadsheet(sheet);
     }
     /** Устанавливаем имя аккаунта в google.
      * @param username Имя аккаунта.
      * @return true - Имя записано успешно.*/
-    public static boolean setModuleUserName(String username) { return Version.setUsername(username); }
+    public static boolean setModuleUserName(String username) { return version.setUsername(username); }
     /** Устанавливаем пароль в google.
      * @param password Пароль аккаунта.
      * @return true - Пароль записано успешно.*/
     public static boolean setModulePassword(String password) {
-        return Version.setPassword(password);
+        return version.setPassword(password);
     }
     /** Устанавливаем номер телефона. Формат "+38хххххххххх"
      * @param phone Пароль аккаунта.
      * @return true - телефон записано успешно.*/
     public static boolean setModulePhone(String phone) {
-        return Version.setPhone(phone);
+        return version.setPhone(phone);
     }
-
 
     /** Получить сохраненое значение фильтраАЦП.
      * @return Значение фильтра от 1 до 15.
@@ -484,7 +305,7 @@ public abstract class ScaleModule extends Handler {
     public static String getPassword(){return Versions.password;}
     public static void setPassword(String password) { Versions.password = password; }
 
-    public static int getSensorTenzo() {return Version.getSensorTenzo(); }
+    public static int getSensorTenzo() {return version.getSensorTenzo(); }
     public static void setSensorTenzo(int sensorTenzo) { Versions.sensorTenzo = sensorTenzo; }
 
     public static int getWeightMargin() {  return Versions.weightMargin;  }
@@ -494,48 +315,41 @@ public abstract class ScaleModule extends Handler {
 
     public static void setNumVersion(int version) { numVersion = version; }
 
-    public static String getName() { return device.getName(); }
+    public static String getNameBluetoothDevice() { return getDevice().getName(); }
 
-    public static String getAddress() { return device.getAddress(); }
-
-    public BluetoothDevice getDevice(){ return device; }
-
-    public BluetoothAdapter getBluetoothAdapter(){ return bluetoothAdapter; }
+    public static String getAddressBluetoothDevice() { return getDevice().getAddress(); }
 
     public static int getMarginTenzo() {
         return Versions.getMarginTenzo();
     }
 
-    public static void load() throws Exception {
-        Version.load();
-    }
+    public static void load() throws Exception { version.load(); }
 
     public static boolean setOffsetScale() {
-        return Version.setOffsetScale();
+        return version.setOffsetScale();
     }
 
     public static boolean isLimit() {
-        return Version.isLimit();
+        return version.isLimit();
     }
 
     public static boolean isMargin() {
-        return Version.isMargin();
+        return version.isMargin();
     }
 
     public static int updateWeight() {
-        return Version.updateWeight();
+        return version.updateWeight();
     }
 
     public static boolean setScaleNull() {
-        return Version.setScaleNull();
+        return version.setScaleNull();
     }
 
     public static boolean writeData() {
-        return Version.writeData();
+        return version.writeData();
     }
 
-    private class ConnectThread extends Thread {
-
+    Runnable runnableScaleConnect = new Runnable() {
         @Override
         public void run() {
             try {
@@ -545,27 +359,25 @@ public abstract class ScaleModule extends Handler {
                         load();
                         handleResultConnect(ResultConnect.STATUS_LOAD_OK);
                     } catch (Versions.ErrorModuleException e) {
-                        handleConnectError(Error.MODULE_ERROR, e.getMessage());
+                        handleConnectError(ResultError.MODULE_ERROR, e.getMessage());
                     }catch (Versions.ErrorTerminalException e){
-                        handleConnectError(Error.TERMINAL_ERROR, e.getMessage());
+                        handleConnectError(ResultError.TERMINAL_ERROR, e.getMessage());
                     }catch (Exception e){
-                        handleConnectError(Error.MODULE_ERROR, e.getMessage());
+                        handleConnectError(ResultError.MODULE_ERROR, e.getMessage());
                     }
                 } else {
                     disconnect();
                     handleResultConnect(ResultConnect.STATUS_SCALE_UNKNOWN);
                 }
             } catch (IOException e) {
-                handleConnectError(Error.CONNECT_ERROR, e.getMessage());
+                handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
             }
             handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
         }
-    }
+    };
 
-    /**
-     * Класс для показаний батареи и температуры надо использевать после
-     * создания класса com.kostya.module.ScaleModule и инициализации метода init().
-     */
+    /** Класс для обработки показаний батареи и температуры надо использевать после
+     *  создания класса com.kostya.module.ScaleModule и инициализации метода init(). */
     public abstract static class HandlerBatteryTemperature {
         static MeasureBatteryTemperature measureBatteryTemperature;
 
@@ -573,11 +385,11 @@ public abstract class ScaleModule extends Handler {
          * @param battery результат заряд батареи в процентах
          * @param temperature результат температуры в градусах
          * @return возвращяет время для обновления показаний в секундах*/
-        public abstract int handlerBatteryTemperature(int battery, int temperature);
+        public abstract int onEvent(int battery, int temperature);
 
         private class MeasureBatteryTemperature extends Thread {
             private boolean start;
-            private boolean cancelled;
+            private volatile boolean cancelled;
             /** счётчик автообнуления */
             private int autoNull;
             /** Время обновления в секундах*/
@@ -593,7 +405,7 @@ public abstract class ScaleModule extends Handler {
             @Override
             public void run() {
                 while (!cancelled) {
-                    timeUpdate = handlerBatteryTemperature(getModuleBatteryCharge(), getModuleTemperature());
+                    timeUpdate = onEvent(getModuleBatteryCharge(), getModuleTemperature());
                     try { TimeUnit.SECONDS.sleep(timeUpdate); } catch (InterruptedException ignored) { cancelled = true;  }
                     if (Versions.weight != Integer.MIN_VALUE && Math.abs(Versions.weight) < weightError) { //автоноль
                         autoNull += 1;
@@ -608,7 +420,7 @@ public abstract class ScaleModule extends Handler {
                 start = false;
             }
 
-            private void cancel() {
+            private synchronized void cancel() {
                 cancelled = true;
             }
 
@@ -616,8 +428,9 @@ public abstract class ScaleModule extends Handler {
                 if (exe) {
                     if (!start)
                         start();
-                } else
+                } else{
                     cancel();
+                }
             }
 
             private boolean isStart() {
@@ -657,11 +470,8 @@ public abstract class ScaleModule extends Handler {
         }
     }
 
-    /**
-     * Класс выводит показаний веса и значения датчика. Надо использевать после
-     * создания класса com.kostya.module.ScaleModule и инициализации метода init()
-     * абстрактный метод handlerWeight возвращяе показания.
-     */
+    /** Класс обработки показаний веса и значения датчика. Надо использевать после
+     *  создания класса com.kostya.module.ScaleModule и инициализации метода init(). */
     public abstract static class HandlerWeight {
         static MeasureWeight measureWeight;
         /** Метод возвращяет значения веса и датчика
@@ -669,12 +479,12 @@ public abstract class ScaleModule extends Handler {
          * @param weight результат веса
          * @param sensor результат показаний датчика веса
          * @return возвращяет время для обновления показаний в милисикундах*/
-        public abstract int handlerWeight(ResultWeight what, int weight, int sensor);
+        public abstract int onEvent(ResultWeight what, int weight, int sensor);
 
         private class MeasureWeight extends Thread { //поток получения батареи
             //final HandlerWeightUpdate h;
             private boolean start;
-            private boolean cancelled;
+            private volatile boolean cancelled;
             public int timeUpdate = 50;
 
             @Override
@@ -698,13 +508,13 @@ public abstract class ScaleModule extends Handler {
                             msg = ResultWeight.WEIGHT_NORMAL;
                         }
                     }
-                    timeUpdate = handlerWeight(msg, Versions.weight, getSensorTenzo());
+                    timeUpdate = onEvent(msg, Versions.weight, getSensorTenzo());
                     try { Thread.sleep(timeUpdate); } catch (InterruptedException ignored) { cancelled = true; }
                 }
                 start = false;
             }
 
-            private void cancel() {
+            private synchronized void cancel() {
                 cancelled = true;
             }
 
