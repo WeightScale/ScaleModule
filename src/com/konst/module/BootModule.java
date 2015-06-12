@@ -9,6 +9,9 @@ import java.io.IOException;
 public abstract class BootModule extends ScaleModule {
     String version = "";
 
+    /** Конструктор модуля бутлодера.
+     * @param version Верситя бутлодера.
+     */
     public BootModule(String version){
         this.version = version;
     }

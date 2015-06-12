@@ -490,21 +490,17 @@ public abstract class ScaleModule extends Handler {
     public static int getWeightMargin() {  return Versions.weightMargin;  }
     public static void setWeightMargin(int weightMargin) { Versions.weightMargin = weightMargin;  }
 
-    public static int getNumVersion() {
-        return numVersion;
-    }
+    public static int getNumVersion() { return numVersion; }
 
-    public static void setNumVersion(int version) {
-        numVersion = version;
-    }
+    public static void setNumVersion(int version) { numVersion = version; }
 
-    public static String getName() {
-        return device.getName();
-    }
+    public static String getName() { return device.getName(); }
 
-    public static String getAddress() {
-        return device.getAddress();
-    }
+    public static String getAddress() { return device.getAddress(); }
+
+    public BluetoothDevice getDevice(){ return device; }
+
+    public BluetoothAdapter getBluetoothAdapter(){ return bluetoothAdapter; }
 
     public static int getMarginTenzo() {
         return Versions.getMarginTenzo();
