@@ -2,12 +2,9 @@ package com.konst.module; /**
  * Copyright (c) 2015.
  */
 
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
-import android.os.Handler;
+
 import java.io.*;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -152,18 +149,24 @@ public abstract class ScaleModule extends Module {
     //==================================================================================================================
     /** Установливаем новое значение АЦП в весовом модуле. Знчение от1 до 15
      * @param  filterADC Значение АЦП от 1 до 15
-     * @return true Значение установлено*/
+     * @return true Значение установлено
+     * @see InterfaceVersions#CMD_FILTER
+     */
     public static boolean setModuleFilterADC(int filterADC) {
         return cmd(InterfaceVersions.CMD_FILTER + filterADC).equals(InterfaceVersions.CMD_FILTER);
     }
     /** Получаем из весового модуля время выключения при бездействии устройства
-     * @return время в минутах*/
+     * @return время в минутах
+     * @see InterfaceVersions#CMD_TIMER
+     */
     public static String getModuleTimeOff() {
         return cmd(InterfaceVersions.CMD_TIMER);
     }
     /** записываем в весовой модуль время выключения при бездействии устройства
      * @param timeOff Время в минутах
-     * @return true Значение установлено*/
+     * @return true Значение установлено
+     * @see InterfaceVersions#CMD_TIMER
+     */
     public static boolean setModuleTimeOff(int timeOff) {
         return cmd(InterfaceVersions.CMD_TIMER + timeOff).equals(InterfaceVersions.CMD_TIMER);
     }
@@ -175,6 +178,7 @@ public abstract class ScaleModule extends Module {
      *  4 - 57600bps.
      *  5 - 115200bps.
      * @return Значение от 1 до 5.
+     * @see InterfaceVersions#CMD_SPEED
      */
     public static String getModuleSpeedPort() {
         return cmd(InterfaceVersions.CMD_SPEED);
@@ -188,21 +192,31 @@ public abstract class ScaleModule extends Module {
      *  5 - 115200bps.
      * @param speed Значение скорости.
      * @return true - Значение записано.
+     * @see InterfaceVersions#CMD_SPEED
      */
     public static boolean setModuleSpeedPort(int speed) {
         return cmd(InterfaceVersions.CMD_SPEED + speed).equals(InterfaceVersions.CMD_SPEED);
     }
 
+    /** Получить офсет датчика веса.
+     * @return Значение офсет.
+     * @see InterfaceVersions#CMD_GET_OFFSET
+     */
     public static String getModuleOffsetSensor() {
         return cmd(InterfaceVersions.CMD_GET_OFFSET);
     }
 
+    /** Получить значение датчика веса.
+     * @return Значение датчика.
+     * @see InterfaceVersions#CMD_SENSOR
+     */
     public static String feelWeightSensor() {
         return cmd(InterfaceVersions.CMD_SENSOR);
     }
 
     /** Получаем значение заряда батерии.
      * @return Заряд батареи в процентах.
+     * @see InterfaceVersions#CMD_BATTERY
      */
     public static int getModuleBatteryCharge() {
         try {
@@ -217,12 +231,14 @@ public abstract class ScaleModule extends Module {
      *  Используется для калибровки заряда батареи.
      * @param charge Заряд батереи в процентах.
      * @return true - Заряд установлен.
+     * @see InterfaceVersions#CMD_CALL_BATTERY
      */
     public static boolean setModuleBatteryCharge(int charge) {
         return cmd(InterfaceVersions.CMD_CALL_BATTERY + charge).equals(InterfaceVersions.CMD_CALL_BATTERY);
     }
     /** Получаем значение температуры весового модуля.
      * @return Температура в градусах.
+     * @see InterfaceVersions#CMD_DATA_TEMP
      */
     public static int getModuleTemperature() {
         try {
@@ -232,49 +248,69 @@ public abstract class ScaleModule extends Module {
         }
     }
     /** Получаем версию hardware весового модуля.
-     * @return Hardware версия весового модуля. */
+     * @return Hardware версия весового модуля.
+     * @see InterfaceVersions#CMD_HARDWARE
+     */
     public static String getModuleHardware() {
         return cmd(InterfaceVersions.CMD_HARDWARE);
     }
     /** Устанавливаем имя весового модуля.
      * @param name Имя весового модуля.
-     * @return true - Имя записано в модуль.*/
+     * @return true - Имя записано в модуль.
+     * @see InterfaceVersions#CMD_NAME
+     */
     public static boolean setModuleName(String name) {
         return cmd(InterfaceVersions.CMD_NAME + name).equals(InterfaceVersions.CMD_NAME);
     }
     /** Устанавливаем калибровку батареи.
      * @param percent Значение калибровки в процентах.
-     * @return true - Калибровка прошла успешно.*/
+     * @return true - Калибровка прошла успешно.
+     * @see InterfaceVersions#CMD_CALL_BATTERY
+     */
     public static boolean setModuleCalibrateBattery(int percent) {
         return cmd(InterfaceVersions.CMD_CALL_BATTERY + percent).equals(InterfaceVersions.CMD_CALL_BATTERY);
     }
     /** Устанавливаем имя spreadsheet в google drive.
      * @param sheet Имя таблици.
-     * @return true - Имя записано успешно.*/
+     * @return true - Имя записано успешно.
+     * @see Versions#setSpreadsheet(String)
+     */
     public static boolean setModuleSpreadsheet(String sheet) {
         return version.setSpreadsheet(sheet);
     }
     /** Устанавливаем имя аккаунта в google.
      * @param username Имя аккаунта.
-     * @return true - Имя записано успешно.*/
+     * @return true - Имя записано успешно.
+     * @see Versions#setUsername(String)
+     */
     public static boolean setModuleUserName(String username) { return version.setUsername(username); }
     /** Устанавливаем пароль в google.
      * @param password Пароль аккаунта.
-     * @return true - Пароль записано успешно.*/
+     * @return true - Пароль записано успешно.
+     * @see Versions#setPassword(String)
+     */
     public static boolean setModulePassword(String password) {
         return version.setPassword(password);
     }
     /** Устанавливаем номер телефона. Формат "+38хххххххххх"
      * @param phone Пароль аккаунта.
-     * @return true - телефон записано успешно.*/
+     * @return true - телефон записано успешно.
+     * @see Versions#setPhone(String)
+     */
     public static boolean setModulePhone(String phone) {
         return version.setPhone(phone);
     }
 
     /** Получить сохраненое значение фильтраАЦП.
      * @return Значение фильтра от 1 до 15.
+     * @see Versions#filterADC
      */
     public static int getFilterADC(){return Versions.filterADC;}
+
+    /** Установить значение фильтра АЦП.
+     * @param filterADC Значение АЦП.
+     * @see Versions#filterADC
+     */
     public static void setFilterADC(int filterADC){ Versions.filterADC = filterADC; }
 
     public static int getWeightMax() { return Versions.weightMax; }
@@ -349,7 +385,7 @@ public abstract class ScaleModule extends Module {
         return version.writeData();
     }
 
-    Runnable runnableScaleConnect = new Runnable() {
+    private final Runnable runnableScaleConnect = new Runnable() {
         @Override
         public void run() {
             try {
@@ -377,7 +413,8 @@ public abstract class ScaleModule extends Module {
     };
 
     /** Класс для обработки показаний батареи и температуры надо использевать после
-     *  создания класса com.kostya.module.ScaleModule и инициализации метода init(). */
+     *  создания класса com.kostya.module.ScaleModule и инициализации метода init().
+     */
     public abstract static class HandlerBatteryTemperature {
         static MeasureBatteryTemperature measureBatteryTemperature;
 
@@ -471,7 +508,8 @@ public abstract class ScaleModule extends Module {
     }
 
     /** Класс обработки показаний веса и значения датчика. Надо использевать после
-     *  создания класса com.kostya.module.ScaleModule и инициализации метода init(). */
+     *  создания класса com.kostya.module.ScaleModule и инициализации метода init().
+     */
     public abstract static class HandlerWeight {
         static MeasureWeight measureWeight;
         /** Метод возвращяет значения веса и датчика

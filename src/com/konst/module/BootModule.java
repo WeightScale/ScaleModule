@@ -12,14 +12,16 @@ public abstract class BootModule extends Module {
     /** Конструктор модуля бутлодера.
      * @param version Верситя бутлодера.
      */
-    public BootModule(String version){
+    protected BootModule(String version){
         this.version = version;
     }
 
     /** Инициализация соединения с будлодером.
      * Перед инициализациеи надо создать класс com.kostya.module.BootModule
      * @param bootVersion Имя будлодера для синхронизации с весовым модулем.
-     * @param address адресс bluetooth модуля весов.*/
+     * @param address адресс bluetooth модуля весов.
+     * @see Module#init(String)
+     */
     public void init(String bootVersion, String address) throws Exception {
         init(address);
         version = bootVersion;
@@ -31,12 +33,19 @@ public abstract class BootModule extends Module {
         new Thread(runnableBootConnect).start();
     }
 
+    /**
+     * Разьеденится с загрузчиком.
+     * Вызывать этот метод при закрытии программы.
+     */
     public void dettach(){
         removeCallbacksAndMessages(null);
         disconnect();
     }
 
-    Runnable runnableBootConnect = new Runnable() {
+    /**
+     * Обработчик для процесса соединения
+     */
+    private final Runnable runnableBootConnect = new Runnable() {
         @Override
         public void run() {
             try {
@@ -52,7 +61,7 @@ public abstract class BootModule extends Module {
     /** Комманда старт программирования.
      * @return true - Запущено программирование.
      */
-    public boolean start(){   return cmd("STR").equals("STR"); }
+    public boolean start(){   return "STR".equals(cmd("STR")); }
 
     /** Получить код микросхемы.
      * @return Код в текстовом виде.
@@ -69,9 +78,9 @@ public abstract class BootModule extends Module {
      */
     public int getBootVersion(){
         String vrs = cmd("VRS");
-        if (vrs.startsWith(this.version)) {
+        if (vrs.startsWith(version)) {
             try {
-                return Integer.valueOf(vrs.replace(this.version, ""));
+                return Integer.valueOf(vrs.replace(version, ""));
             } catch (Exception e) {
                 return 0;
             }

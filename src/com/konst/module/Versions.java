@@ -83,12 +83,12 @@ abstract class Versions implements InterfaceVersions{
 
     /** Получаем значение установленого фильтра в АЦП
      * @return значение от 1 до 15 */
-    private static String getFilterADC() { return ScaleModule.cmd(CMD_FILTER); }
+    private static String getFilterADC() { return Module.cmd(InterfaceVersions.CMD_FILTER); }
 
     protected void loadFilterADC() throws Exception {
         filterADC = Integer.valueOf(getFilterADC());
-        if (filterADC < 0 || filterADC > MAX_ADC_FILTER) {
-            if (!ScaleModule.setModuleFilterADC(DEFAULT_ADC_FILTER))
+        if (filterADC < 0 || filterADC > InterfaceVersions.MAX_ADC_FILTER) {
+            if (!ScaleModule.setModuleFilterADC(InterfaceVersions.DEFAULT_ADC_FILTER))
                 throw new ErrorModuleException("Фильтер АЦП не установлен в настройках");
             filterADC = InterfaceVersions.DEFAULT_ADC_FILTER;
         }
@@ -96,8 +96,8 @@ abstract class Versions implements InterfaceVersions{
 
     protected void loadTimeOff() throws Exception {
         timeOff = Integer.valueOf(ScaleModule.getModuleTimeOff());
-        if (timeOff < InterfaceVersions.MIN_TIME_OFF || timeOff > MAX_TIME_OFF) {
-            if (!ScaleModule.setModuleTimeOff(MIN_TIME_OFF))
+        if (timeOff < InterfaceVersions.MIN_TIME_OFF || timeOff > InterfaceVersions.MAX_TIME_OFF) {
+            if (!ScaleModule.setModuleTimeOff(InterfaceVersions.MIN_TIME_OFF))
                 throw new ErrorModuleException("Таймер выключения не установлен в настройках");
             timeOff = InterfaceVersions.MIN_TIME_OFF;
         }
@@ -135,7 +135,7 @@ abstract class Versions implements InterfaceVersions{
     /**
      * A simple class that provides utilities to ease command line parsing.
      */
-    class SimpleCommandLineParser {
+    static class SimpleCommandLineParser {
 
         private final Map<String, String> argMap;
 

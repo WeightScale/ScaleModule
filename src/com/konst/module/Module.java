@@ -10,58 +10,76 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
-/** Весовой модуль
+/**
+ * Р’РµСЃРѕРІРѕР№ РјРѕРґСѓР»СЊ
  * @author Kostya
  */
 public abstract class Module extends Handler {
+    /** Bluetooth СѓСЃС‚СЂРѕР№СЃС‚РІРѕ РјРѕРґСѓР»СЏ РІРµСЃРѕРІ. */
     private static BluetoothDevice device;
+    /** Bluetooth Р°РґР°РїС‚РµСЂ С‚РµСЂРјРёРЅР°Р»Р° */
     private static final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private static BluetoothSocket socket;
     private static OutputStream os;
     private static InputStream is;
-    /** Константа время задержки для получения байта */
-    static final int TIMEOUT_GET_BYTE = 2000;
-    /** Константы результат соединения */
+    /** РљРѕРЅСЃС‚Р°РЅС‚Р° РІСЂРµРјСЏ Р·Р°РґРµСЂР¶РєРё РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ Р±Р°Р№С‚Р° */
+    private static final int TIMEOUT_GET_BYTE = 2000;
+    /** РљРѕРЅСЃС‚Р°РЅС‚С‹ СЂРµР·СѓР»СЊС‚Р°С‚ СЃРѕРµРґРёРЅРµРЅРёСЏ */
     public enum ResultConnect {
-        /**Соединение и загрузка данных из весового модуля успешно*/
+        /**РЎРѕРµРґРёРЅРµРЅРёРµ Рё Р·Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С… РёР· РІРµСЃРѕРІРѕРіРѕ РјРѕРґСѓР»СЏ СѓСЃРїРµС€РЅРѕ*/
         STATUS_LOAD_OK,
-        /** Неизвесная вервия весового модуля */
+        /** РќРµРёР·РІРµСЃРЅР°СЏ РІРµСЂРІРёСЏ РІРµСЃРѕРІРѕРіРѕ РјРѕРґСѓР»СЏ */
         STATUS_SCALE_UNKNOWN,
-        /** Конец стадии присоединения (можно использовать для закрытия прогресс диалога) */
+        /** РљРѕРЅРµС† СЃС‚Р°РґРёРё РїСЂРёСЃРѕРµРґРёРЅРµРЅРёСЏ (РјРѕР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РґР»СЏ Р·Р°РєСЂС‹С‚РёСЏ РїСЂРѕРіСЂРµСЃСЃ РґРёР°Р»РѕРіР°) */
         STATUS_ATTACH_FINISH,
-        /** Начало стадии присоединения (можно использовать для открытия прогресс диалога) */
+        /** РќР°С‡Р°Р»Рѕ СЃС‚Р°РґРёРё РїСЂРёСЃРѕРµРґРёРЅРµРЅРёСЏ (РјРѕР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РґР»СЏ РѕС‚РєСЂС‹С‚РёСЏ РїСЂРѕРіСЂРµСЃСЃ РґРёР°Р»РѕРіР°) */
         STATUS_ATTACH_START
     }
-    /** Константы ошибок соединения */
+    /** РљРѕРЅСЃС‚Р°РЅС‚С‹ РѕС€РёР±РѕРє СЃРѕРµРґРёРЅРµРЅРёСЏ */
     public enum ResultError{
-        /** Ошибка настриек терминала */
+        /** РћС€РёР±РєР° РЅР°СЃС‚СЂРёРµРє С‚РµСЂРјРёРЅР°Р»Р° */
         TERMINAL_ERROR,
-        /** Ошибка настроек весового модуля */
+        /** РћС€РёР±РєР° РЅР°СЃС‚СЂРѕРµРє РІРµСЃРѕРІРѕРіРѕ РјРѕРґСѓР»СЏ */
         MODULE_ERROR,
-        /** Ошибка соединения с модулем */
+        /** РћС€РёР±РєР° СЃРѕРµРґРёРЅРµРЅРёСЏ СЃ РјРѕРґСѓР»РµРј */
         CONNECT_ERROR
     }
 
-    /** Сообщения о результате соединения.
-     * Используется после вызова метода init()
-     * @param what Результат соединения константа ResultConnect*/
+    /** РЎРѕРѕР±С‰РµРЅРёСЏ Рѕ СЂРµР·СѓР»СЊС‚Р°С‚Рµ СЃРѕРµРґРёРЅРµРЅРёСЏ.
+     * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїРѕСЃР»Рµ РІС‹Р·РѕРІР° РјРµС‚РѕРґР° init()
+     * @param what Р РµР·СѓР»СЊС‚Р°С‚ СЃРѕРµРґРёРЅРµРЅРёСЏ РєРѕРЅСЃС‚Р°РЅС‚Р° ResultConnect
+     * @see Module.ResultConnect*/
     public abstract void handleResultConnect(ResultConnect what);
-    /** Сообщения об ошибках соединения. Используется после вызоа метода init()
-     * @param what Результат какая ошибака константа Error
-     * @param error описание ошибки*/
+
+    /** РЎРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєР°С… СЃРѕРµРґРёРЅРµРЅРёСЏ. РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїРѕСЃР»Рµ РІС‹Р·РѕР° РјРµС‚РѕРґР° init()
+     * @param what Р РµР·СѓР»СЊС‚Р°С‚ РєР°РєР°СЏ РѕС€РёР±Р°РєР° РєРѕРЅСЃС‚Р°РЅС‚Р° Error
+     * @param error РѕРїРёСЃР°РЅРёРµ РѕС€РёР±РєРё
+     * @see Module.ResultError
+     */
     public abstract void handleConnectError(ResultError what, String error);
 
-    /** Инициализация и соединение с весовым модулем.
-     * @param device bluetooth устройство*/
+    /** РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Рё СЃРѕРµРґРёРЅРµРЅРёРµ СЃ РІРµСЃРѕРІС‹Рј РјРѕРґСѓР»РµРј.
+     * @param device bluetooth СѓСЃС‚СЂРѕР№СЃС‚РІРѕ*/
     protected void init( BluetoothDevice device){
-        this.device = device;
+        Module.device = device;
     }
 
+    /** РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Рё СЃРѕРµРґРёРЅРµРЅРёРµ СЃ РІРµСЃРѕРІС‹Рј РјРѕРґСѓР»РµРј.
+     * @param address РђРґСЂРµСЃСЃ bluetooth.
+     * @throws Exception РќРµРїСЂР°РІРµР»СЊРЅС‹Р№ Р°РґСЂРµСЃ.
+     */
     protected void init(String address) throws Exception {
         device = bluetoothAdapter.getRemoteDevice(address);
     }
 
-    protected static synchronized String cmd(String cmd) { //послать команду и получить ответ
+    /** РџРѕСЃР»Р°С‚СЊ РєРѕРјР°РЅРґСѓ Рє РјРѕРґСѓР»СЋ Рё РїРѕР»СѓС‡РёС‚СЊ РѕС‚РІРµС‚
+     * @param cmd РљРѕРјР°РЅРґР° РІ С‚РµРєСЃС‚РѕРІРѕРј РІРёРґРµ. Р¤РѕСЂРјР°С‚ [РєРѕРјР°РЅРґР°][РїР°СЂР°РјРµС‚СЂ] РїР°СЂР°РјРµС‚СЂ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј.
+     *            Р•СЃР»Рё РµСЃС‚СЊ РїР°СЂР°РјРµС‚ С‚Рѕ РїР°СЂР°РјРµС‚СЂ Р·Р°РїРёСЃС‹РІР°РµС‚СЃСЏ, РёРЅР°С‡Рµ РєРѕРјР°РЅРґР° РїРѕР»СѓС‡Р°РµС‚ РїР°СЂР°РјРµС‚СЂ.
+     * @return РРјСЏ РєРѕРјР°РЅРґС‹ РёР»Рё РїР°СЂР°РјРµС‚СЂ. Р•СЃР»Рё РІРµСЂРЅСѓР»Р°СЃСЊ РёРјСЏ РєРѕРјР°РЅРґС‹ С‚Рѕ РїРѕСЃР»Р°РЅС‹Р№ РїР°СЂР°РјРµС‚СЂ Р·Р°РїРёСЃР°РЅ СѓРґР°С‡РЅРѕ.
+     *          Р•СЃР»Рё РІРµСЂРЅСѓР»Р°СЃСЊ РїСѓСЃС‚Р°СЏ СЃС‚СЂРѕРєР° С‚Рѕ РєРѕРјР°РЅРґР° РЅРµ РІС‹РїРѕР»РЅРµРЅР°.
+     * @see InterfaceVersions
+     */
+    protected static synchronized String cmd(String cmd) {
         try {
             synchronized (ScaleModule.class) {
                 int t = is.available();
@@ -108,9 +126,13 @@ public abstract class Module extends Handler {
         os.write(cmd.getBytes());
         os.write((byte) 0x0D);
         os.write((byte) 0x0A);
-        os.flush(); //что этот метод делает?
+        os.flush(); //С‡С‚Рѕ СЌС‚РѕС‚ РјРµС‚РѕРґ РґРµР»Р°РµС‚?
     }
 
+    /** РџРѕСЃР»Р°С‚СЊ Р±Р°Р№С‚.
+     * @param ch Р‘Р°Р№С‚ РґР»СЏ РѕС‚СЃС‹Р»РєРё.
+     * @return true - Р±Р°Р№С‚ РѕС‚РѕСЃР»Р°РЅ Р±РµР· РѕС€РёР±РєРё.
+     */
     public static synchronized boolean sendByte(byte ch) {
         try {
             int t = is.available();
@@ -118,7 +140,7 @@ public abstract class Module extends Handler {
                 is.read(new byte[t]);
             }
             os.write(ch);
-            os.flush(); //что этот метод делает?
+            os.flush(); //С‡С‚Рѕ СЌС‚РѕС‚ РјРµС‚РѕРґ РґРµР»Р°РµС‚?
             return true;
         } catch (IOException ioe) {
         }
@@ -129,12 +151,15 @@ public abstract class Module extends Handler {
         return false;
     }
 
+    /** РџРѕР»СѓС‡РёС‚СЊ Р±Р°Р№С‚.
+     * @return РџСЂРёРЅСЏС‚С‹Р№ Р±Р°Р№С‚.
+     */
     public static synchronized int getByte() {
 
         try {
             for (int i = 0; i < TIMEOUT_GET_BYTE; i++) {
                 if (is.available() > 0) {
-                    return is.read(); //временный символ (байт)
+                    return is.read(); //РІСЂРµРјРµРЅРЅС‹Р№ СЃРёРјРІРѕР» (Р±Р°Р№С‚)
                 }
                 Thread.sleep(1);
             }
@@ -149,7 +174,10 @@ public abstract class Module extends Handler {
         return 0;
     }
 
-    protected static synchronized void connect() throws IOException { //соединиться с весами
+    /** РџРѕР»СѓС‡Р°РµРј СЃРѕРµРґРёРЅРµРЅРёРµ СЃ bluetooth РІРµСЃРѕРІС‹Рј РјРѕРґСѓР»РµРј.
+     * @throws IOException РћС€РёР±РєР° СЃРѕРµРґРёРЅРµРЅРёСЏ.
+     */
+    protected static synchronized void connect() throws IOException {
         disconnect();
         // Get a BluetoothSocket for a connection with the given BluetoothDevice
         socket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
@@ -159,7 +187,10 @@ public abstract class Module extends Handler {
         os = socket.getOutputStream();
     }
 
-    protected static void disconnect() { //рассоединиться
+    /**
+     * РџРѕР»СѓС‡Р°РµРј СЂР°Р·СЊРµРґРёРЅРµРЅРёРµ СЃ bluetooth РІРµСЃРѕРІС‹Рј РјРѕРґСѓР»РµРј
+     */
+    protected static void disconnect() { //СЂР°СЃСЃРѕРµРґРёРЅРёС‚СЊСЃСЏ
         try {
             if (socket != null)
                 socket.close();
@@ -176,12 +207,19 @@ public abstract class Module extends Handler {
         socket = null;
     }
 
-    public static BluetoothDevice getDevice(){ return device; }
+    /** РџРѕР»СѓС‡РёС‚СЊ bluetooth СѓСЃС‚СЂРѕР№СЃС‚РІРѕ РјРѕРґСѓР»СЏ.
+     * @return bluetooth СѓСЃС‚СЂРѕР№СЃС‚РІРѕ.
+     */
+    protected static BluetoothDevice getDevice(){ return device; }
+    /** РџРѕР»СѓС‡РёС‚СЊ bluetooth Р°РґР°РїС‚РµСЂ С‚РµСЂРјРёРЅР°Р»Р°.
+     * @return bluetooth Р°РґР°РїС‚РµСЂ.
+     */
+    protected BluetoothAdapter getAdapter(){ return bluetoothAdapter; }
 
-    public BluetoothAdapter getAdapter(){ return bluetoothAdapter; }
-
-    /** Получаем версию весов из весового модуля
-     * @return Версию весового модуля в текстовом виде*/
+    /** РџРѕР»СѓС‡Р°РµРј РІРµСЂСЃРёСЋ РїСЂРѕРіСЂР°РјРјС‹ РёР· РІРµСЃРѕРІРѕРіРѕ РјРѕРґСѓР»СЏ
+     * @return Р’РµСЂСЃРёСЏ РІРµСЃРѕРІРѕРіРѕ РјРѕРґСѓР»СЏ РІ С‚РµРєСЃС‚РѕРІРѕРј РІРёРґРµ.
+     * @see InterfaceVersions#CMD_VERSION
+     * */
     public static String getModuleVersion() {
         return cmd(InterfaceVersions.CMD_VERSION);
     }

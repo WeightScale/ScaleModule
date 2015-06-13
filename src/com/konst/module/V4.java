@@ -21,13 +21,13 @@ class V4 extends Versions {
             throw new ErrorModuleException("Сделать обнуление в настройках");
         }
         //======================================================================
-        spreadsheet = ScaleModule.cmd(InterfaceVersions.CMD_SPREADSHEET);
-        username = ScaleModule.cmd(InterfaceVersions.CMD_G_USER);
-        password = ScaleModule.cmd(InterfaceVersions.CMD_G_PASS);
-        phone = ScaleModule.cmd(InterfaceVersions.CMD_PHONE);
+        spreadsheet = Module.cmd(InterfaceVersions.CMD_SPREADSHEET);
+        username = Module.cmd(InterfaceVersions.CMD_G_USER);
+        password = Module.cmd(InterfaceVersions.CMD_G_PASS);
+        phone = Module.cmd(InterfaceVersions.CMD_PHONE);
         //======================================================================
 
-        isDataValid(ScaleModule.cmd(InterfaceVersions.CMD_DATA));
+        isDataValid(Module.cmd(InterfaceVersions.CMD_DATA));
 
         weightMargin = (int) (weightMax * 1.2);
         marginTenzo = (int) ((weightMax / coefficientA) * 1.2);
@@ -36,7 +36,7 @@ class V4 extends Versions {
     @Override
     protected synchronized int updateWeight() {
         try {
-            sensorTenzoOffset = Integer.valueOf(ScaleModule.cmd(InterfaceVersions.CMD_SENSOR_OFFSET));
+            sensorTenzoOffset = Integer.valueOf(Module.cmd(InterfaceVersions.CMD_SENSOR_OFFSET));
             return weight = (int) (coefficientA * sensorTenzoOffset);
         } catch (Exception e) {
             return sensorTenzoOffset = weight = Integer.MIN_VALUE;
@@ -50,12 +50,12 @@ class V4 extends Versions {
 
     @Override
     protected synchronized boolean setOffsetScale() { //обнуление
-        return Module.cmd(CMD_SET_OFFSET).equals(CMD_SET_OFFSET);
+        return Module.cmd(InterfaceVersions.CMD_SET_OFFSET).equals(InterfaceVersions.CMD_SET_OFFSET);
     }
 
     @Override
     protected boolean writeData() {
-        return ScaleModule.cmd(InterfaceVersions.CMD_DATA +
+        return Module.cmd(InterfaceVersions.CMD_DATA +
                 InterfaceVersions.CMD_DATA_CFA + '=' + coefficientA + ' ' +
                 InterfaceVersions.CMD_DATA_WGM + '=' + weightMax + ' ' +
                 InterfaceVersions.CMD_DATA_LMT + '=' + limitTenzo).equals(InterfaceVersions.CMD_DATA);
@@ -107,22 +107,22 @@ class V4 extends Versions {
 
     @Override
     protected boolean setSpreadsheet(String sheet) {
-        return ScaleModule.cmd(InterfaceVersions.CMD_SPREADSHEET + sheet).equals(InterfaceVersions.CMD_SPREADSHEET);
+        return Module.cmd(InterfaceVersions.CMD_SPREADSHEET + sheet).equals(InterfaceVersions.CMD_SPREADSHEET);
     }
 
     @Override
     protected boolean setUsername(String username) {
-        return ScaleModule.cmd(InterfaceVersions.CMD_G_USER + username).equals(InterfaceVersions.CMD_G_USER);
+        return Module.cmd(InterfaceVersions.CMD_G_USER + username).equals(InterfaceVersions.CMD_G_USER);
     }
 
     @Override
     protected boolean setPassword(String password) {
-        return ScaleModule.cmd(InterfaceVersions.CMD_G_PASS + password).equals(InterfaceVersions.CMD_G_PASS);
+        return Module.cmd(InterfaceVersions.CMD_G_PASS + password).equals(InterfaceVersions.CMD_G_PASS);
     }
 
     @Override
     protected boolean setPhone(String phone) {
-        return ScaleModule.cmd(InterfaceVersions.CMD_PHONE + phone).equals(InterfaceVersions.CMD_PHONE);
+        return Module.cmd(InterfaceVersions.CMD_PHONE + phone).equals(InterfaceVersions.CMD_PHONE);
     }
 
 }

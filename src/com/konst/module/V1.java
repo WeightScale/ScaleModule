@@ -12,7 +12,7 @@ class V1 extends Versions {
         //==============================================================================================================
         loadTimeOff();
         //==============================================================================================================
-        isDataValid(ScaleModule.cmd(InterfaceVersions.CMD_DATA));
+        isDataValid(Module.cmd(InterfaceVersions.CMD_DATA));
 
         weightMargin = (int) (weightMax * 1.2);
     }
@@ -20,7 +20,7 @@ class V1 extends Versions {
     @Override
     protected synchronized int updateWeight() {
         try {
-            sensorTenzo = Integer.valueOf(ScaleModule.cmd(InterfaceVersions.CMD_SENSOR));
+            sensorTenzo = Integer.valueOf(Module.cmd(InterfaceVersions.CMD_SENSOR));
             return weight = (int) (coefficientA * sensorTenzo + coefficientB);
         } catch (Exception e) {
             return sensorTenzo = weight = Integer.MIN_VALUE;
@@ -35,7 +35,7 @@ class V1 extends Versions {
     @Override
     protected synchronized boolean setOffsetScale() { //обнуление
         try {
-            coefficientB = -coefficientA * Integer.parseInt(ScaleModule.cmd(InterfaceVersions.CMD_SENSOR));
+            coefficientB = -coefficientA * Integer.parseInt(Module.cmd(InterfaceVersions.CMD_SENSOR));
         } catch (Exception e) {
             return false;
         }
@@ -44,7 +44,7 @@ class V1 extends Versions {
 
     @Override
     protected boolean writeData() {
-        return ScaleModule.cmd(InterfaceVersions.CMD_DATA + 'S' + coefficientA + ' ' + coefficientB + ' ' + weightMax).equals(InterfaceVersions.CMD_DATA);
+        return Module.cmd(InterfaceVersions.CMD_DATA + 'S' + coefficientA + ' ' + coefficientB + ' ' + weightMax).equals(InterfaceVersions.CMD_DATA);
     }
 
     @Override
@@ -79,7 +79,7 @@ class V1 extends Versions {
 
     @Override
     protected boolean setScaleNull() {
-        String str = ScaleModule.cmd(InterfaceVersions.CMD_SENSOR);
+        String str = Module.cmd(InterfaceVersions.CMD_SENSOR);
         if (str.isEmpty()) {
             return false;
         }

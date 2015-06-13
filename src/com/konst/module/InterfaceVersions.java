@@ -5,37 +5,70 @@ package com.konst.module;
  * @author Kostya
  */
 public interface InterfaceVersions {
+    /**максимальное значение фильтра ацп*/
+    int MAX_ADC_FILTER = 15;
+    /**максимальное значение фильтра ацп*/
+    int DEFAULT_ADC_FILTER = 8;
+    /**максимальное время бездействия весов в минутах*/
+    int MAX_TIME_OFF = 60;
+    /**минимальное время бездействия весов в минутах*/
+    int MIN_TIME_OFF = 10;
 
-    int MAX_ADC_FILTER = 15;                //максимальное значение фильтра ацп
-    int DEFAULT_ADC_FILTER = 8;             //максимальное значение фильтра ацп
-    int MAX_TIME_OFF = 60;                  //максимальное время бездействия весов в минутах
-    int MIN_TIME_OFF = 10;                  //минимальное время бездействия весов в минутах
-
-    int DIVIDER_AUTO_NULL = 3;                          //делитель для авто ноль
-
-    String CMD_VERSION = "VRS";                         //получить версию весов
-    String CMD_FILTER = "FAD";                          //получить/установить АЦП-фильтр
-    String CMD_TIMER = "TOF";                           //получить/установить таймер выключения весов
-    String CMD_SPEED = "BST";                           //получить/установить скорость передачи данных
+    /**делитель для авто ноль*/
+    int DIVIDER_AUTO_NULL = 3;
+    /**получить версию весов*/
+    String CMD_VERSION = "VRS";
+    /**получить/установить АЦП-фильтр*/
+    String CMD_FILTER = "FAD";
+    /**получить/установить таймер выключения весов*/
+    String CMD_TIMER = "TOF";
+    /**получить/установить скорость передачи данных*/
+    String CMD_SPEED = "BST";
+    /**получить offset*/
     String CMD_GET_OFFSET = "GCO";
-    String CMD_SET_OFFSET = "SCO";                      //установить offset
-    String CMD_BATTERY = "GBT";                         //получить передать заряд батареи
-    String CMD_DATA_TEMP = "DTM";                       //считать/записать данные температуры
-    String CMD_HARDWARE = "HRW";                        //получить версию hardware
-    String CMD_NAME = "SNA";                            //установить имя весов
-    String CMD_CALL_BATTERY = "CBT";                    //каллибровать процент батареи
+    /**установить offset*/
+    String CMD_SET_OFFSET = "SCO";
+    /**получить передать заряд батареи*/
+    String CMD_BATTERY = "GBT";
+    /**считать/записать данные температуры*/
+    String CMD_DATA_TEMP = "DTM";
+    /**получить версию hardware*/
+    String CMD_HARDWARE = "HRW";
+    /**установить имя весов*/
+    String CMD_NAME = "SNA";
+    /**каллибровать процент батареи*/
+    String CMD_CALL_BATTERY = "CBT";
+    /**считать/записать данные весов*/
+    String CMD_DATA = "DAT";
+    /**получить показание датчика веса*/
+    String CMD_SENSOR = "DCH";
+    /**считать/записать имя таблици созданой в google disc*/
+    String CMD_SPREADSHEET = "SGD";
+    /**считать/записать account google disc*/
+    String CMD_G_USER = "UGD";
+    /**считать/записать password google disc*/
+    String CMD_G_PASS = "PGD";
+    /**считать/записать phone for sms boss*/
+    String CMD_PHONE = "PHN";
+    /**получить показание датчика веса минус офсет*/
+    String CMD_SENSOR_OFFSET = "DCO";
 
-    String CMD_DATA = "DAT";                //считать/записать данные весов
-    String CMD_SENSOR = "DCH";              //получить показание датчика веса
-    String CMD_SPREADSHEET = "SGD";         //считать/записать имя таблици созданой в google disc
-    String CMD_G_USER = "UGD";              //считать/записать account google disc
-    String CMD_G_PASS = "PGD";              //считать/записать password google disc
-    String CMD_PHONE = "PHN";               //считать/записать phone for sms boss
-    String CMD_SENSOR_OFFSET = "DCO";       //получить показание датчика веса минус офсет
-
-    String CMD_DATA_CFA = "cfa";            //коэфициэнт А
-    String CMD_DATA_CFB = "cfb";            //коэфициэнт Б
-    String CMD_DATA_WGM = "wgm";            //вес максимальный
-    String CMD_DATA_LMT = "lmt";            //лимит тензодатчика
+    /**коэфициэнт А
+     * Используется с коммандой DAT
+     * @see this#CMD_DATA
+     * */
+    String CMD_DATA_CFA = "cfa";
+    /**коэфициэнт Б
+     * Используется с коммандой DAT
+     * @see this#CMD_DATA*/
+    String CMD_DATA_CFB = "cfb";
+    /**вес максимальный
+     * Используется с коммандой DAT
+     * @see this#CMD_DATA*/
+    String CMD_DATA_WGM = "wgm";
+    /**лимит тензодатчика
+     * Используется с коммандой DAT
+     * @see this#CMD_DATA*/
+    String CMD_DATA_LMT = "lmt";
 
 }
