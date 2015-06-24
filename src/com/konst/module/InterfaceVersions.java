@@ -52,7 +52,6 @@ public interface InterfaceVersions {
     String CMD_PHONE = "PHN";
     /**получить показание датчика веса минус офсет*/
     String CMD_SENSOR_OFFSET = "DCO";
-
     /**коэфициэнт А
      * Используется с коммандой DAT
      * @see this#CMD_DATA
@@ -60,15 +59,18 @@ public interface InterfaceVersions {
     String CMD_DATA_CFA = "cfa";
     /**коэфициэнт Б
      * Используется с коммандой DAT
-     * @see this#CMD_DATA*/
+     * @see this#CMD_DATA
+     */
     String CMD_DATA_CFB = "cfb";
     /**вес максимальный
      * Используется с коммандой DAT
-     * @see this#CMD_DATA*/
+     * @see this#CMD_DATA
+     */
     String CMD_DATA_WGM = "wgm";
     /**лимит тензодатчика
      * Используется с коммандой DAT
-     * @see this#CMD_DATA*/
+     * @see this#CMD_DATA
+     */
     String CMD_DATA_LMT = "lmt";
 
 }

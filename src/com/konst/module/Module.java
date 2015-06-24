@@ -81,7 +81,7 @@ public abstract class Module extends Handler {
      */
     protected static synchronized String cmd(String cmd) {
         try {
-            synchronized (ScaleModule.class) {
+            //synchronized (Module.class) {
                 int t = is.available();
                 if (t > 0) {
                     is.read(new byte[t]);
@@ -110,14 +110,12 @@ public abstract class Module extends Handler {
                         response.append(ch);
                     }
                 }
-            }
+            //}
 
         } catch (IOException | InterruptedException ioe) {
-        }
-
-        try {
-            connect();
-        } catch (IOException e) {
+            try {
+                connect();
+            } catch (IOException e) { }
         }
         return "";
     }

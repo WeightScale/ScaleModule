@@ -325,7 +325,6 @@ public abstract class ScaleModule extends Module {
     public static int getTimeOff(){return Versions.timeOff;}
     public static void setTimeOff(int timeOff) { Versions.timeOff = timeOff; }
 
-
     public static float getCoefficientA() { return Versions.coefficientA; }
     public static void setCoefficientA(float coefficientA) { Versions.coefficientA = coefficientA; }
 
