@@ -26,7 +26,7 @@ public abstract class Module extends Handler {
     private static final int TIMEOUT_GET_BYTE = 2000;
     /** Константы результат соединения */
     public enum ResultConnect {
-        /**Соединение и загрузка данных из весового модуля успешно*/
+        /** Соединение и загрузка данных из весового модуля успешно */
         STATUS_LOAD_OK,
         /** Неизвесная вервия весового модуля */
         STATUS_SCALE_UNKNOWN,
@@ -48,7 +48,8 @@ public abstract class Module extends Handler {
     /** Сообщения о результате соединения.
      * Используется после вызова метода init()
      * @param what Результат соединения константа ResultConnect
-     * @see Module.ResultConnect*/
+     * @see Module.ResultConnect
+     * */
     public abstract void handleResultConnect(ResultConnect what);
 
     /** Сообщения об ошибках соединения. Используется после вызоа метода init()
@@ -59,7 +60,8 @@ public abstract class Module extends Handler {
     public abstract void handleConnectError(ResultError what, String error);
 
     /** Инициализация и соединение с весовым модулем.
-     * @param device bluetooth устройство*/
+     * @param device bluetooth устройство
+     * */
     protected void init( BluetoothDevice device){
         Module.device = device;
     }
@@ -74,8 +76,8 @@ public abstract class Module extends Handler {
 
     /** Послать команду к модулю и получить ответ
      * @param cmd Команда в текстовом виде. Формат [команда][параметр] параметр может быть пустым.
-     *            Если есть парамет то параметр записывается, иначе команда получает параметр.
-     * @return Имя команды или параметр. Если вернулась имя команды то посланый параметр записан удачно.
+     *            Если есть парамет то обрабатывается параметр, иначе команда возвращяет параметр.
+     * @return Имя команды или параметр. Если вернулась имя команды то посланый параметр обработан удачно.
      *          Если вернулась пустая строка то команда не выполнена.
      * @see InterfaceVersions
      */
@@ -209,6 +211,7 @@ public abstract class Module extends Handler {
      * @return bluetooth устройство.
      */
     protected static BluetoothDevice getDevice(){ return device; }
+
     /** Получить bluetooth адаптер терминала.
      * @return bluetooth адаптер.
      */

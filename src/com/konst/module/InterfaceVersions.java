@@ -38,7 +38,7 @@ public interface InterfaceVersions {
     String CMD_NAME = "SNA";
     /**каллибровать процент батареи*/
     String CMD_CALL_BATTERY = "CBT";
-    /**считать/записать данные весов*/
+    /**Считать/записать данные весов */
     String CMD_DATA = "DAT";
     /**получить показание датчика веса*/
     String CMD_SENSOR = "DCH";
@@ -52,24 +52,25 @@ public interface InterfaceVersions {
     String CMD_PHONE = "PHN";
     /**получить показание датчика веса минус офсет*/
     String CMD_SENSOR_OFFSET = "DCO";
-    /**коэфициэнт А
-     * Используется с коммандой DAT
-     * @see this#CMD_DATA
-     * */
+    /**коэфициэнт А.
+     * Расчитывается при каллибровки весов. Используется для расчета веса.
+     * Используется как параметр комманды {@link InterfaceVersions#CMD_DATA}
+     * @see InterfaceVersions#CMD_DATA
+     */
     String CMD_DATA_CFA = "cfa";
     /**коэфициэнт Б
-     * Используется с коммандой DAT
-     * @see this#CMD_DATA
+     * Используется как параметр комманды {@link InterfaceVersions#CMD_DATA}
+     * @see InterfaceVersions#CMD_DATA
      */
     String CMD_DATA_CFB = "cfb";
-    /**вес максимальный
-     * Используется с коммандой DAT
-     * @see this#CMD_DATA
+    /**Значение максимального веса для тензодатчика.
+     * Используется как параметр комманды {@link InterfaceVersions#CMD_DATA}
+     * @see InterfaceVersions#CMD_DATA
      */
     String CMD_DATA_WGM = "wgm";
-    /**лимит тензодатчика
-     * Используется с коммандой DAT
-     * @see this#CMD_DATA
+    /**Значение максимального значения для тензодатчика.
+     * Используется как параметр комманды {@link InterfaceVersions#CMD_DATA}
+     * @see InterfaceVersions#CMD_DATA
      */
     String CMD_DATA_LMT = "lmt";
 

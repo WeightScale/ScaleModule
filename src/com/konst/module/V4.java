@@ -8,8 +8,11 @@ import java.util.Iterator;
  */
 class V4 extends Versions {
 
+    /** Загрузить сохраненные параметры из модуля.
+     * @throws Exception Ошибка загрузки параметров.
+     */
     @Override
-    protected void load() throws Exception { //загрузить данные
+    protected void load() throws Exception {
         //======================================================================
         loadFilterADC();
         //======================================================================
@@ -33,6 +36,10 @@ class V4 extends Versions {
         marginTenzo = (int) ((weightMax / coefficientA) * 1.2);
     }
 
+    /** Обновить значения веса.
+     * Получаем показания сенсора и переводим в занчение веса.
+     * @return Значение веса.
+     */
     @Override
     protected synchronized int updateWeight() {
         try {
@@ -43,16 +50,26 @@ class V4 extends Versions {
         }
     }
 
+    /** Проверка лимита нагрузки сенсора.
+     * @return true - Лимит нагрузки сенсора превышен.
+     */
     @Override
     protected boolean isLimit() {
         return Math.abs(sensorTenzoOffset + offset) > limitTenzo;
     }
 
+    /** Установить обнуление.
+     * @return true - Обнуление установлено.
+     */
     @Override
     protected synchronized boolean setOffsetScale() { //обнуление
         return Module.cmd(InterfaceVersions.CMD_SET_OFFSET).equals(InterfaceVersions.CMD_SET_OFFSET);
     }
 
+    /** Записать данные параметров в модуль.
+     * @return true - Данные записаны.
+     * @see InterfaceVersions#CMD_DATA
+     */
     @Override
     protected boolean writeData() {
         return Module.cmd(InterfaceVersions.CMD_DATA +
@@ -61,6 +78,11 @@ class V4 extends Versions {
                 InterfaceVersions.CMD_DATA_LMT + '=' + limitTenzo).equals(InterfaceVersions.CMD_DATA);
     }
 
+    /** Получить показания сенсора с учетом обнуления.
+     * @return Значение сенсора.
+     * @see V4#setOffsetScale()
+     * @see V4#sensorTenzoOffset
+     */
     @Override
     protected int getSensorTenzo() {
         return sensorTenzoOffset + offset;
@@ -71,11 +93,21 @@ class V4 extends Versions {
         return Math.abs(sensorTenzoOffset + offset) > marginTenzo;
     }
 
+    /** Установить ноль.
+     * @return true - Ноль установлен.
+     */
     @Override
     protected boolean setScaleNull() {
         return setOffsetScale();
     }
 
+    /** Проверка данных полученых от модуля.
+     * Формат параметра данных: [[{@link InterfaceVersions#CMD_DATA_CFA}=[значение]] [{@link InterfaceVersions#CMD_DATA_WGM}=[значение]] [{@link InterfaceVersions#CMD_DATA_LMT}=[значение]]]
+     * @param d Данные
+     * @throws Exception Данные не правельные.
+     * @see V4#load()
+     * @see InterfaceVersions#CMD_DATA
+     */
     protected void isDataValid(String d) throws Exception{
         String[] parts = d.split(" ", 0);
         SimpleCommandLineParser data = new SimpleCommandLineParser(parts, "=");

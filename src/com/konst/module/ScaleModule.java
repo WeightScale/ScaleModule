@@ -20,7 +20,7 @@ public abstract class ScaleModule extends Module {
     protected static int battery;
     /** Погрешность веса автоноль */
     protected static int weightError;
-    /** Время срабатывания авто нуля */
+    /** Время срабатывания авто ноля */
     protected static int timerNull;
     private static int numVersion;
     private static String versionName;
@@ -31,7 +31,7 @@ public abstract class ScaleModule extends Module {
         WEIGHT_ERROR,
         /** Значение веса в диапазоне весового модуля */
         WEIGHT_NORMAL,
-        /** Значение веса в диапазоне лилима взвешивания*/
+        /** Значение веса в диапазоне лилита взвешивания*/
         WEIGHT_LIMIT,
         /** Значение веса в диапазоне перегрузки */
         WEIGHT_MARGIN
@@ -46,26 +46,30 @@ public abstract class ScaleModule extends Module {
      */
     public static int getBattery(){return battery;}
     /** Меняем ранне полученое значение заряда батареи весового модуля
-     * @param battery Заряд батареи в процентах*/
+     * @param battery Заряд батареи в процентах
+     */
     public static void setBattery(int battery) { ScaleModule.battery = battery; }
     /** Получаем значение веса погрешности для расчета атоноль
      * @return возвращяет значение веса
      */
     public static int getWeightError() { return weightError; }
     /** Сохраняем значение веса погрешности для расчета автоноль
-     * @param weightError Значение погрешности в килограмах */
+     * @param weightError Значение погрешности в килограмах
+     */
     public static void setWeightError(int weightError) { ScaleModule.weightError = weightError;  }
     /** Время для срабатывания автоноль
      * @return возвращяем время после которого установливается автоноль
      */
     public static int getTimerNull() { return timerNull; }
     /** Устонавливаем значение времени после которого срабатывает автоноль
-     * @param timerNull Значение времени в секундах*/
+     * @param timerNull Значение времени в секундах
+     */
     public static void setTimerNull(int timerNull) { ScaleModule.timerNull = timerNull; }
     /** Инициализация и соединение с весовым модулем. Перед инициализациеи надо создать
      *  класс com.kostya.module.ScaleModule
      * @param moduleVersion Версия модуля для соединения
-     * @param device bluetooth устройство*/
+     * @param device bluetooth устройство
+     */
     public void init(String moduleVersion, BluetoothDevice device){
         init(device);
         setup(moduleVersion);
@@ -73,7 +77,8 @@ public abstract class ScaleModule extends Module {
     /** Инициализация и соединение с весовым модулем.
      * Перед инициализациеи надо создать класс com.kostya.module.ScaleModule
      * @param moduleVersion Версия модуля для соединения
-     * @param address адресс bluetooth устройства*/
+     * @param address адресс bluetooth устройства
+     */
     public void init(String moduleVersion, String address) throws Exception {
         init(address);
         setup(moduleVersion);
@@ -84,7 +89,8 @@ public abstract class ScaleModule extends Module {
         attach();
     }
     /** Отсоединение весового модуля.
-     * Необходимо использовать перед закрытием программы чтобы остановить работающие процессы */
+     * Необходимо использовать перед закрытием программы чтобы остановить работающие процессы
+     */
     public void dettach() {
         if (isAttach()) {
             new Thread(new Runnable() {
@@ -111,11 +117,11 @@ public abstract class ScaleModule extends Module {
     /** Прверяем если весовой модуль присоеденен.
      * @return true если было присоединение и загрузка версии весового модуля
      */
-    public static boolean isAttach() { return version != null; }
+    protected static boolean isAttach() { return version != null; }
     /** Определяем после соединения это весовой модуль и какой версии
      * указаной при инициализации класса com.kostya.module.ScaleModule.
      * @return true версия правильная
-     * */
+     */
     public static boolean isScales() {
         String vrs = cmd(InterfaceVersions.CMD_VERSION); //Получаем версию весов
         if (vrs.startsWith(versionName)) {

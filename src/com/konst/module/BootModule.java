@@ -20,7 +20,8 @@ public abstract class BootModule extends Module {
      * Перед инициализациеи надо создать класс com.kostya.module.BootModule
      * @param bootVersion Имя будлодера для синхронизации с весовым модулем.
      * @param address адресс bluetooth модуля весов.
-     * @see Module#init(String)
+     * @see Module#init
+     * @throws Exception Ошибка инициализации.
      */
     public void init(String bootVersion, String address) throws Exception {
         init(address);
