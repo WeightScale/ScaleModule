@@ -52,6 +52,9 @@ public interface InterfaceVersions {
     String CMD_PHONE = "PHN";
     /**получить показание датчика веса минус офсет*/
     String CMD_SENSOR_OFFSET = "DCO";
+    /** Выключить питание модуля*/
+    String CMD_POWER_OFF = "POF";
+
     /**коэфициэнт А.
      * Расчитывается при каллибровки весов. Используется для расчета веса.
      * Используется как параметр комманды {@link InterfaceVersions#CMD_DATA}

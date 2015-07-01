@@ -7,7 +7,6 @@ import java.util.Iterator;
  *  @version 4
  */
 class V4 extends Versions {
-
     /** Загрузить сохраненные параметры из модуля.
      * @throws Exception Ошибка загрузки параметров.
      */

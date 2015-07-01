@@ -117,7 +117,7 @@ public abstract class ScaleModule extends Module {
     /** Прверяем если весовой модуль присоеденен.
      * @return true если было присоединение и загрузка версии весового модуля
      */
-    protected static boolean isAttach() { return version != null; }
+    public static boolean isAttach() { return version != null; }
     /** Определяем после соединения это весовой модуль и какой версии
      * указаной при инициализации класса com.kostya.module.ScaleModule.
      * @return true версия правильная
@@ -305,6 +305,13 @@ public abstract class ScaleModule extends Module {
      */
     public static boolean setModulePhone(String phone) {
         return version.setPhone(phone);
+    }
+
+    /** Выключить питание модуля.
+     * @return true - питание выключено.
+     */
+    public static boolean setModulePowerOff(){
+        return version.powerOff();
     }
 
     /** Получить сохраненое значение фильтраАЦП.

@@ -114,6 +114,13 @@ abstract class Versions implements InterfaceVersions{
 
     protected static int getMarginTenzo() { return marginTenzo; }
 
+    /** Выключить питание модуля
+     * @return true - питание модкля выключено.
+     */
+    protected boolean powerOff(){
+        return Module.cmd(CMD_POWER_OFF).equals(CMD_POWER_OFF);
+    }
+
     protected static class ErrorTerminalException extends Exception{
 
         private static final long serialVersionUID = -5686828330979812580L;
