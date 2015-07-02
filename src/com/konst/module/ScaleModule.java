@@ -84,6 +84,9 @@ public abstract class ScaleModule extends Module {
         setup(moduleVersion);
     }
 
+    /**
+     * @param v
+     */
     private void setup(String v){
         versionName = v;
         attach();
