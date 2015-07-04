@@ -4,24 +4,29 @@ import java.io.IOException;
 
 /**
  * Класс для самопрограммирования весового модуля
+ *
  * @author Kostya
  */
 public abstract class BootModule extends Module {
     String version = "";
 
-    /** Конструктор модуля бутлодера.
+    /**
+     * Конструктор модуля бутлодера.
+     *
      * @param version Верситя бутлодера.
      */
-    protected BootModule(String version){
+    protected BootModule(String version) {
         this.version = version;
     }
 
-    /** Инициализация соединения с будлодером.
+    /**
+     * Инициализация соединения с будлодером.
      * Перед инициализациеи надо создать класс com.kostya.module.BootModule
+     *
      * @param bootVersion Имя будлодера для синхронизации с весовым модулем.
-     * @param address адресс bluetooth модуля весов.
-     * @see Module#init
+     * @param address     адресс bluetooth модуля весов.
      * @throws Exception Ошибка инициализации.
+     * @see Module#init
      */
     public void init(String bootVersion, String address) throws Exception {
         init(address);
@@ -38,7 +43,7 @@ public abstract class BootModule extends Module {
      * Разьеденится с загрузчиком.
      * Вызывать этот метод при закрытии программы.
      */
-    public void dettach(){
+    public void dettach() {
         removeCallbacksAndMessages(null);
         disconnect();
     }
@@ -59,25 +64,39 @@ public abstract class BootModule extends Module {
         }
     };
 
-    /** Комманда старт программирования.
+    /**
+     * Комманда старт программирования.
+     *
      * @return true - Запущено программирование.
      */
-    public boolean start(){   return "STR".equals(cmd("STR")); }
+    public boolean start() {
+        return "STR".equals(cmd("STR"));
+    }
 
-    /** Получить код микросхемы.
+    /**
+     * Получить код микросхемы.
+     *
      * @return Код в текстовом виде.
      */
-    public String getPartCode(){  return cmd("PRC"); }
+    public String getPartCode() {
+        return cmd("PRC");
+    }
 
-    /** Получить версию железа.
+    /**
+     * Получить версию железа.
+     *
      * @return Версия в текстовом виде.
      */
-    public String getHardware(){  return cmd("HRW");  }
+    public String getHardware() {
+        return cmd("HRW");
+    }
 
-    /** Получить версию загрузчика.
+    /**
+     * Получить версию загрузчика.
+     *
      * @return Номер версии.
      */
-    public int getBootVersion(){
+    public int getBootVersion() {
         String vrs = cmd("VRS");
         if (vrs.startsWith(version)) {
             try {

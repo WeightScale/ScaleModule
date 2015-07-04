@@ -12,61 +12,96 @@ import java.util.UUID;
 
 /**
  * Весовой модуль
+ *
  * @author Kostya
  */
 public abstract class Module extends Handler {
-    /** Bluetooth устройство модуля весов. */
+    /**
+     * Bluetooth устройство модуля весов.
+     */
     private static BluetoothDevice device;
-    /** Bluetooth адаптер терминала */
+    /**
+     * Bluetooth адаптер терминала
+     */
     private static final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private static BluetoothSocket socket;
     private static OutputStream os;
     private static InputStream is;
-    /** Константа время задержки для получения байта */
+    /**
+     * Константа время задержки для получения байта
+     */
     private static final int TIMEOUT_GET_BYTE = 2000;
-    /** Константы результат соединения */
+
+    /**
+     * Константы результат соединения
+     */
     public enum ResultConnect {
-        /** Соединение и загрузка данных из весового модуля успешно */
+        /**
+         * Соединение и загрузка данных из весового модуля успешно
+         */
         STATUS_LOAD_OK,
-        /** Неизвесная вервия весового модуля */
+        /**
+         * Неизвесная вервия весового модуля
+         */
         STATUS_SCALE_UNKNOWN,
-        /** Конец стадии присоединения (можно использовать для закрытия прогресс диалога) */
+        /**
+         * Конец стадии присоединения (можно использовать для закрытия прогресс диалога)
+         */
         STATUS_ATTACH_FINISH,
-        /** Начало стадии присоединения (можно использовать для открытия прогресс диалога) */
+        /**
+         * Начало стадии присоединения (можно использовать для открытия прогресс диалога)
+         */
         STATUS_ATTACH_START
     }
-    /** Константы ошибок соединения */
-    public enum ResultError{
-        /** Ошибка настриек терминала */
+
+    /**
+     * Константы ошибок соединения
+     */
+    public enum ResultError {
+        /**
+         * Ошибка настриек терминала
+         */
         TERMINAL_ERROR,
-        /** Ошибка настроек весового модуля */
+        /**
+         * Ошибка настроек весового модуля
+         */
         MODULE_ERROR,
-        /** Ошибка соединения с модулем */
+        /**
+         * Ошибка соединения с модулем
+         */
         CONNECT_ERROR
     }
 
-    /** Сообщения о результате соединения.
+    /**
+     * Сообщения о результате соединения.
      * Используется после вызова метода init()
+     *
      * @param what Результат соединения константа ResultConnect
      * @see Module.ResultConnect
-     * */
+     */
     public abstract void handleResultConnect(ResultConnect what);
 
-    /** Сообщения об ошибках соединения. Используется после вызоа метода init()
-     * @param what Результат какая ошибака константа Error
+    /**
+     * Сообщения об ошибках соединения. Используется после вызоа метода init()
+     *
+     * @param what  Результат какая ошибака константа Error
      * @param error описание ошибки
      * @see Module.ResultError
      */
     public abstract void handleConnectError(ResultError what, String error);
 
-    /** Инициализация и соединение с весовым модулем.
+    /**
+     * Инициализация и соединение с весовым модулем.
+     *
      * @param device bluetooth устройство
-     * */
-    protected void init( BluetoothDevice device){
+     */
+    protected void init(BluetoothDevice device) {
         Module.device = device;
     }
 
-    /** Инициализация и соединение с весовым модулем.
+    /**
+     * Инициализация и соединение с весовым модулем.
+     *
      * @param address Адресс bluetooth.
      * @throws Exception Неправельный адрес.
      */
@@ -74,50 +109,53 @@ public abstract class Module extends Handler {
         device = bluetoothAdapter.getRemoteDevice(address);
     }
 
-    /** Послать команду к модулю и получить ответ
+    /**
+     * Послать команду к модулю и получить ответ
+     *
      * @param cmd Команда в текстовом виде. Формат [команда][параметр] параметр может быть пустым.
      *            Если есть парамет то обрабатывается параметр, иначе команда возвращяет параметр.
      * @return Имя команды или параметр. Если вернулась имя команды то посланый параметр обработан удачно.
-     *          Если вернулась пустая строка то команда не выполнена.
+     * Если вернулась пустая строка то команда не выполнена.
      * @see InterfaceVersions
      */
     protected static synchronized String cmd(String cmd) {
         try {
             //synchronized (Module.class) {
-                int t = is.available();
-                if (t > 0) {
-                    is.read(new byte[t]);
-                }
+            int t = is.available();
+            if (t > 0) {
+                is.read(new byte[t]);
+            }
 
-                sendCommand(cmd);
-                StringBuilder response = new StringBuilder();
+            sendCommand(cmd);
+            StringBuilder response = new StringBuilder();
 
-                for (int i = 0; i < 400 && response.length() < 129; ++i) {
-                    Thread.sleep(1L);
-                    if (is.available() > 0) {
-                        i = 0;
-                        char ch = (char) is.read();
-                        if (ch == '\uffff') {
-                            connect();
-                            break;
-                        }
-                        if (ch == '\r')
-                            continue;
-                        if (ch == '\n')
-                            if (response.toString().startsWith(cmd.substring(0, 3)))
-                                return response.replace(0, 3, "").toString().isEmpty() ? cmd.substring(0, 3) : response.toString();
-                            else
-                                return "";
-
-                        response.append(ch);
+            for (int i = 0; i < 400 && response.length() < 129; ++i) {
+                Thread.sleep(1L);
+                if (is.available() > 0) {
+                    i = 0;
+                    char ch = (char) is.read();
+                    if (ch == '\uffff') {
+                        connect();
+                        break;
                     }
+                    if (ch == '\r')
+                        continue;
+                    if (ch == '\n')
+                        if (response.toString().startsWith(cmd.substring(0, 3)))
+                            return response.replace(0, 3, "").toString().isEmpty() ? cmd.substring(0, 3) : response.toString();
+                        else
+                            return "";
+
+                    response.append(ch);
                 }
+            }
             //}
 
         } catch (IOException | InterruptedException ioe) {
             try {
                 connect();
-            } catch (IOException e) { }
+            } catch (IOException e) {
+            }
         }
         return "";
     }
@@ -129,7 +167,9 @@ public abstract class Module extends Handler {
         os.flush(); //что этот метод делает?
     }
 
-    /** Послать байт.
+    /**
+     * Послать байт.
+     *
      * @param ch Байт для отсылки.
      * @return true - байт отослан без ошибки.
      */
@@ -151,7 +191,9 @@ public abstract class Module extends Handler {
         return false;
     }
 
-    /** Получить байт.
+    /**
+     * Получить байт.
+     *
      * @return Принятый байт.
      */
     public static synchronized int getByte() {
@@ -174,7 +216,9 @@ public abstract class Module extends Handler {
         return 0;
     }
 
-    /** Получаем соединение с bluetooth весовым модулем.
+    /**
+     * Получаем соединение с bluetooth весовым модулем.
+     *
      * @throws IOException Ошибка соединения.
      */
     protected static synchronized void connect() throws IOException {
@@ -207,20 +251,30 @@ public abstract class Module extends Handler {
         socket = null;
     }
 
-    /** Получить bluetooth устройство модуля.
+    /**
+     * Получить bluetooth устройство модуля.
+     *
      * @return bluetooth устройство.
      */
-    protected static BluetoothDevice getDevice(){ return device; }
+    protected static BluetoothDevice getDevice() {
+        return device;
+    }
 
-    /** Получить bluetooth адаптер терминала.
+    /**
+     * Получить bluetooth адаптер терминала.
+     *
      * @return bluetooth адаптер.
      */
-    protected BluetoothAdapter getAdapter(){ return bluetoothAdapter; }
+    protected BluetoothAdapter getAdapter() {
+        return bluetoothAdapter;
+    }
 
-    /** Получаем версию программы из весового модуля
+    /**
+     * Получаем версию программы из весового модуля
+     *
      * @return Версия весового модуля в текстовом виде.
      * @see InterfaceVersions#CMD_VERSION
-     * */
+     */
     public static String getModuleVersion() {
         return cmd(InterfaceVersions.CMD_VERSION);
     }

@@ -2,6 +2,7 @@ package com.konst.module;
 
 /**
  * Класс весового модуля
+ *
  * @version 1
  */
 class V1 extends Versions {
@@ -93,9 +94,9 @@ class V1 extends Versions {
         return false;
     }
 
-    protected void isDataValid(String d) throws Exception{
+    protected void isDataValid(String d) throws Exception {
         StringBuilder dataBuffer = new StringBuilder(d);
-        synchronized (this){
+        synchronized (this) {
             dataBuffer.deleteCharAt(0);
             String str = dataBuffer.substring(0, dataBuffer.indexOf(" "));
             coefficientA = Float.valueOf(str);
