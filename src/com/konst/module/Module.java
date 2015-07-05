@@ -151,7 +151,7 @@ public abstract class Module extends Handler {
             }
             //}
 
-        } catch (IOException | InterruptedException ioe) {
+        } catch (Exception ioe) {
             try {
                 connect();
             } catch (IOException e) {
