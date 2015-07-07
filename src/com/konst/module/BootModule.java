@@ -7,7 +7,7 @@ import java.io.IOException;
  *
  * @author Kostya
  */
-public abstract class BootModule extends Module {
+public class BootModule extends Module {
     String version = "";
 
     /**
@@ -15,27 +15,26 @@ public abstract class BootModule extends Module {
      *
      * @param version Верситя бутлодера.
      */
-    protected BootModule(String version) {
+    public BootModule(String version, OnEventConnectResult event)throws Exception{
+        super(event);
         this.version = version;
     }
 
     /**
-     * Инициализация соединения с будлодером.
+     * Инициализация bluetooth адаптера и модуля.
      * Перед инициализациеи надо создать класс com.kostya.module.BootModule
-     *
-     * @param bootVersion Имя будлодера для синхронизации с весовым модулем.
+     * Для соединения {@link BootModule#attach()}
      * @param address     адресс bluetooth модуля весов.
      * @throws Exception Ошибка инициализации.
      * @see Module#init
      */
-    public void init(String bootVersion, String address) throws Exception {
+    public void init( String address) throws Exception {
         init(address);
-        version = bootVersion;
-        attach();
+        //attach();
     }
 
-    private void attach() /*throws Throwable*/ {
-        handleResultConnect(ResultConnect.STATUS_ATTACH_START);
+    public void attach() /*throws Throwable*/ {
+        onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
         new Thread(runnableBootConnect).start();
     }
 
@@ -56,11 +55,11 @@ public abstract class BootModule extends Module {
         public void run() {
             try {
                 connect();
-                handleResultConnect(ResultConnect.STATUS_LOAD_OK);
+                onEventConnectResult.handleResultConnect(ResultConnect.STATUS_LOAD_OK);
             } catch (IOException e) {
-                handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
+                onEventConnectResult.handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
             }
-            handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
+            onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
         }
     };
 

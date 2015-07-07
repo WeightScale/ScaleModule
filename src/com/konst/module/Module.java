@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Весовой модуль
@@ -23,10 +24,11 @@ public abstract class Module extends Handler {
     /**
      * Bluetooth адаптер терминала
      */
-    private static final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    private static BluetoothAdapter bluetoothAdapter = null;
     private static BluetoothSocket socket;
     private static OutputStream os;
     private static InputStream is;
+    OnEventConnectResult onEventConnectResult;
     /**
      * Константа время задержки для получения байта
      */
@@ -78,34 +80,33 @@ public abstract class Module extends Handler {
      *
      * @param what Результат соединения константа ResultConnect
      * @see Module.ResultConnect
-     */
-    public abstract void handleResultConnect(ResultConnect what);
+     *//*
+    public abstract void handleResultConnect(ResultConnect what);*/
 
     /**
      * Сообщения об ошибках соединения. Используется после вызоа метода init()
      *
-     * @param what  Результат какая ошибака константа Error
-     * @param error описание ошибки
+     //* @param what  Результат какая ошибака константа Error
+     //* @param error описание ошибки
      * @see Module.ResultError
-     */
-    public abstract void handleConnectError(ResultError what, String error);
+     *//*
+    public abstract void handleConnectError(ResultError what, String error);*/
 
-    /**
-     * Инициализация и соединение с весовым модулем.
-     *
-     * @param device bluetooth устройство
-     */
-    protected void init(BluetoothDevice device) {
-        Module.device = device;
+    Module(OnEventConnectResult event) throws Exception{
+        onEventConnectResult = event;
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if(bluetoothAdapter == null)
+            throw new Exception("Bluetooth adapter missing");
     }
 
     /**
      * Инициализация и соединение с весовым модулем.
      *
      * @param address Адресс bluetooth.
-     * @throws Exception Неправельный адрес.
+     * @throws NullPointerException
+     * @throws IllegalArgumentException
      */
-    protected void init(String address) throws Exception {
+    protected void init(String address) throws Exception{
         device = bluetoothAdapter.getRemoteDevice(address);
     }
 
@@ -120,7 +121,6 @@ public abstract class Module extends Handler {
      */
     protected static synchronized String cmd(String cmd) {
         try {
-            //synchronized (Module.class) {
             int t = is.available();
             if (t > 0) {
                 is.read(new byte[t]);
@@ -149,12 +149,12 @@ public abstract class Module extends Handler {
                     response.append(ch);
                 }
             }
-            //}
 
         } catch (Exception ioe) {
             try {
                 connect();
             } catch (IOException e) {
+                try { TimeUnit.SECONDS.sleep(1); } catch (InterruptedException e1) { }
             }
         }
         return "";
@@ -236,12 +236,12 @@ public abstract class Module extends Handler {
      */
     protected static void disconnect() { //рассоединиться
         try {
-            if (socket != null)
-                socket.close();
             if (is != null)
                 is.close();
             if (os != null)
                 os.close();
+            if (socket != null)
+                socket.close();
         } catch (IOException ioe) {
             socket = null;
             //return;
@@ -256,7 +256,7 @@ public abstract class Module extends Handler {
      *
      * @return bluetooth устройство.
      */
-    protected static BluetoothDevice getDevice() {
+    public static BluetoothDevice getDevice() {
         return device;
     }
 
@@ -265,7 +265,7 @@ public abstract class Module extends Handler {
      *
      * @return bluetooth адаптер.
      */
-    protected BluetoothAdapter getAdapter() {
+    public BluetoothAdapter getAdapter() {
         return bluetoothAdapter;
     }
 

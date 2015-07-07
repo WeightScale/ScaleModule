@@ -9,13 +9,13 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Главный класс для работы с весовым модулем. Инициализируем в теле программы. В абстрактных методах используем
- * возвращеные результаты после запуска метода init()
+ * возвращеные результаты после запуска метода {@link ScaleModule#init(String)}.
  * Пример:com.kostya.module.ScaleModule scaleModule = new com.kostya.module.ScaleModule();
  * scaleModule.init("version", "bluetooth");
  *
  * @author Kostya
  */
-public abstract class ScaleModule extends Module {
+public class ScaleModule extends Module {
     protected static Versions version;
     /**
      * Процент батареи (0-100%)
@@ -31,6 +31,11 @@ public abstract class ScaleModule extends Module {
     protected static int timerNull;
     private static int numVersion;
     private static String versionName;
+
+    public ScaleModule(String moduleVersion, OnEventConnectResult event) throws Exception {
+        super(event);
+        versionName = moduleVersion;
+    }
 
     /**
      * Константы результата взвешивания
@@ -118,27 +123,23 @@ public abstract class ScaleModule extends Module {
     }
 
     /**
-     * Инициализация и соединение с весовым модулем. Перед инициализациеи надо создать
-     * класс com.kostya.module.ScaleModule
-     *
-     * @param moduleVersion Версия модуля для соединения
+     * Инициализация bluetooth адаптера и модуля.
+     * Перед инициализациеи надо создать класс com.kostya.module.ScaleModule
+     * Для соединения {@link ScaleModule#attach()}
      * @param device        bluetooth устройство
      */
-    public void init(String moduleVersion, BluetoothDevice device) {
-        init(device);
-        setup(moduleVersion);
+    public void init( BluetoothDevice device) throws Exception{
+        super.init(device.getAddress());
     }
 
     /**
-     * Инициализация и соединение с весовым модулем.
+     * Инициализация bluetooth адаптера и модуля.
      * Перед инициализациеи надо создать класс com.kostya.module.ScaleModule
-     *
-     * @param moduleVersion Версия модуля для соединения
+     * Для соединения {@link ScaleModule#attach()}
      * @param address       адресс bluetooth устройства
      */
-    public void init(String moduleVersion, String address) throws Exception {
-        init(address);
-        setup(moduleVersion);
+    public void init( String address) throws Exception {
+        super.init(address);
     }
 
     /**
@@ -146,7 +147,7 @@ public abstract class ScaleModule extends Module {
      */
     private void setup(String v) {
         versionName = v;
-        attach();
+        //attach();
     }
 
     /**
@@ -207,11 +208,20 @@ public abstract class ScaleModule extends Module {
         return false;
     }
 
-    private void attach() {
-        handleResultConnect(ResultConnect.STATUS_ATTACH_START);
+    /**
+     * Соединится с модулем.
+     */
+    public void attach() {
+        //handleResultConnect(ResultConnect.STATUS_ATTACH_START);
+        onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
         new Thread(runnableScaleConnect).start();
     }
 
+    /** Определяем версию весов.
+     * @param version Имя версии.
+     * @return Экземпляр версии.
+     * @throws Exception
+     */
     private static Versions fetchVersion(int version) throws Exception {
         switch (version) {
             case 1:
@@ -600,22 +610,22 @@ public abstract class ScaleModule extends Module {
                 if (isScales()) {
                     try {
                         load();
-                        handleResultConnect(ResultConnect.STATUS_LOAD_OK);
+                        onEventConnectResult.handleResultConnect(ResultConnect.STATUS_LOAD_OK);
                     } catch (Versions.ErrorModuleException e) {
-                        handleConnectError(ResultError.MODULE_ERROR, e.getMessage());
+                        onEventConnectResult.handleConnectError(ResultError.MODULE_ERROR, e.getMessage());
                     } catch (Versions.ErrorTerminalException e) {
-                        handleConnectError(ResultError.TERMINAL_ERROR, e.getMessage());
+                        onEventConnectResult.handleConnectError(ResultError.TERMINAL_ERROR, e.getMessage());
                     } catch (Exception e) {
-                        handleConnectError(ResultError.MODULE_ERROR, e.getMessage());
+                        onEventConnectResult.handleConnectError(ResultError.MODULE_ERROR, e.getMessage());
                     }
                 } else {
                     disconnect();
-                    handleResultConnect(ResultConnect.STATUS_SCALE_UNKNOWN);
+                    onEventConnectResult.handleResultConnect(ResultConnect.STATUS_SCALE_UNKNOWN);
                 }
             } catch (IOException e) {
-                handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
+                onEventConnectResult.handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
             }
-            handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
+            onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
         }
     };
 
@@ -658,11 +668,7 @@ public abstract class ScaleModule extends Module {
             public void run() {
                 while (!cancelled) {
                     timeUpdate = onEvent(getModuleBatteryCharge(), getModuleTemperature());
-                    try {
-                        TimeUnit.SECONDS.sleep(timeUpdate);
-                    } catch (InterruptedException ignored) {
-                        cancelled = true;
-                    }
+                    try { TimeUnit.SECONDS.sleep(timeUpdate); } catch (InterruptedException ignored) {}
                     if (Versions.weight != Integer.MIN_VALUE && Math.abs(Versions.weight) < weightError) { //автоноль
                         autoNull += 1;
                         if (autoNull > timerNull / InterfaceVersions.DIVIDER_AUTO_NULL) {
@@ -756,12 +762,12 @@ public abstract class ScaleModule extends Module {
         static MeasureWeight measureWeight;
 
         /**
-         * Метод возвращяет значения веса и датчика
+         * Метод возвращяет значения веса и датчика.
          *
-         * @param what   результат статуса измерения enum ResultWeight
-         * @param weight результат веса
-         * @param sensor результат показаний датчика веса
-         * @return возвращяет время для обновления показаний в милисикундах
+         * @param what   результат статуса измерения enum ResultWeight.
+         * @param weight результат веса.
+         * @param sensor результат показаний датчика веса.
+         * @return возвращяет время для обновления показаний в милисикундах.
          */
         public abstract int onEvent(ResultWeight what, int weight, int sensor);
 
@@ -793,11 +799,7 @@ public abstract class ScaleModule extends Module {
                         }
                     }
                     timeUpdate = onEvent(msg, Versions.weight, getSensorTenzo());
-                    try {
-                        Thread.sleep(timeUpdate);
-                    } catch (InterruptedException ignored) {
-                        cancelled = true;
-                    }
+                    try { Thread.sleep(timeUpdate); } catch ( InterruptedException ignored) {}
                 }
                 start = false;
             }
