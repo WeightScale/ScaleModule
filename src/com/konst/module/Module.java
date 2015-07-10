@@ -74,29 +74,40 @@ public abstract class Module extends Handler {
         CONNECT_ERROR
     }
 
-    /**
-     * Сообщения о результате соединения.
-     * Используется после вызова метода init()
-     *
-     * @param what Результат соединения константа ResultConnect
-     * @see Module.ResultConnect
-     *//*
-    public abstract void handleResultConnect(ResultConnect what);*/
+    public abstract void dettach();
+    public abstract void attach();
 
-    /**
-     * Сообщения об ошибках соединения. Используется после вызоа метода init()
-     *
-     //* @param what  Результат какая ошибака константа Error
-     //* @param error описание ошибки
-     * @see Module.ResultError
-     *//*
-    public abstract void handleConnectError(ResultError what, String error);*/
+    boolean flagTimeout;
+    Handler handler = new Handler();
 
     Module(OnEventConnectResult event) throws Exception{
         onEventConnectResult = event;
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
             throw new Exception("Bluetooth adapter missing");
+        bluetoothAdapter.enable();
+
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!bluetoothAdapter.isEnabled())
+                    flagTimeout = true;
+            }
+        }, 5000);
+        while (!bluetoothAdapter.isEnabled() && !flagTimeout) ;//ждем включения bluetooth
+        if(flagTimeout)
+            throw new Exception("Timeout enabled bluetooth");
+    }
+
+    /** Инициализация bluetooth адаптера и модуля.
+     * Перед инициализациеи надо создать класс com.kostya.module.ScaleModule
+     * Для соединения {@link ScaleModule#attach()}
+     * @param device bluetooth устройство.
+     */
+    public void init( BluetoothDevice device) throws Exception{
+        if(device == null)
+            throw new Exception("Bluetooth device is null ");
+        this.device = device;
     }
 
     /**
@@ -106,7 +117,7 @@ public abstract class Module extends Handler {
      * @throws NullPointerException
      * @throws IllegalArgumentException
      */
-    protected void init(String address) throws Exception{
+    public void init(String address) throws Exception{
         device = bluetoothAdapter.getRemoteDevice(address);
     }
 
@@ -269,15 +280,7 @@ public abstract class Module extends Handler {
         return bluetoothAdapter;
     }
 
-    /**
-     * Получаем версию программы из весового модуля
-     *
-     * @return Версия весового модуля в текстовом виде.
-     * @see InterfaceVersions#CMD_VERSION
-     */
-    public static String getModuleVersion() {
-        return cmd(InterfaceVersions.CMD_VERSION);
-    }
+
 
 
 }

@@ -16,7 +16,6 @@ abstract class Versions implements InterfaceVersions {
      * время выключения весов
      */
     public static int timeOff;
-    //protected int sensor;                      //показание датчика веса
     /**
      * калибровочный коэффициент a
      */
@@ -185,9 +184,7 @@ abstract class Versions implements InterfaceVersions {
         return marginTenzo;
     }
 
-    /**
-     * Выключить питание модуля
-     *
+    /** Выключить питание модуля.
      * @return true - питание модкля выключено.
      */
     protected boolean powerOff() {

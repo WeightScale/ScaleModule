@@ -4,15 +4,15 @@ package com.konst.module;
  * Created by Kostya on 07.07.2015.
  */
 public interface OnEventConnectResult {
-    /**
-     * Сообщения о результате соединения.
+
+    /**Сообщения о результате соединения.
      * Используется при инициализации метода init().
      * @param what Результат соединения константа ResultConnect
      * @see Module.ResultConnect
      */
     void handleResultConnect(Module.ResultConnect what);
-    /**
-     * Сообщения об ошибках соединения.
+
+    /**Сообщения об ошибках соединения.
      * Используется при инициализаци метода init().
      * @param what  Результат какая ошибака константа Error
      * @param error описание ошибки

@@ -31,11 +31,7 @@ public class ScaleModule extends Module {
     protected static int timerNull;
     private static int numVersion;
     private static String versionName;
-
-    public ScaleModule(String moduleVersion, OnEventConnectResult event) throws Exception {
-        super(event);
-        versionName = moduleVersion;
-    }
+    RunnableScaleConnect runnableScaleConnect;
 
     /**
      * Константы результата взвешивания
@@ -57,6 +53,12 @@ public class ScaleModule extends Module {
          * Значение веса в диапазоне перегрузки
          */
         WEIGHT_MARGIN
+    }
+
+    public ScaleModule(String moduleVersion, OnEventConnectResult event) throws Exception {
+        super(event);
+        runnableScaleConnect = new RunnableScaleConnect();
+        versionName = moduleVersion;
     }
 
     /**
@@ -123,57 +125,11 @@ public class ScaleModule extends Module {
     }
 
     /**
-     * Инициализация bluetooth адаптера и модуля.
-     * Перед инициализациеи надо создать класс com.kostya.module.ScaleModule
-     * Для соединения {@link ScaleModule#attach()}
-     * @param device        bluetooth устройство
-     */
-    public void init( BluetoothDevice device) throws Exception{
-        super.init(device.getAddress());
-    }
-
-    /**
-     * Инициализация bluetooth адаптера и модуля.
-     * Перед инициализациеи надо создать класс com.kostya.module.ScaleModule
-     * Для соединения {@link ScaleModule#attach()}
-     * @param address       адресс bluetooth устройства
-     */
-    public void init( String address) throws Exception {
-        super.init(address);
-    }
-
-    /**
-     * @param v
-     */
-    private void setup(String v) {
-        versionName = v;
-        //attach();
-    }
-
-    /**
      * Отсоединение весового модуля.
      * Необходимо использовать перед закрытием программы чтобы остановить работающие процессы
      */
+    @Override
     public void dettach() {
-        if (isAttach()) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        if (HandlerBatteryTemperature.measureBatteryTemperature != null) {
-                            HandlerBatteryTemperature.measureBatteryTemperature.execute(false);
-                            while (HandlerBatteryTemperature.measureBatteryTemperature.isStart()) ;
-                        }
-                        if (HandlerWeight.measureWeight != null) {
-                            HandlerWeight.measureWeight.execute(false);
-                            while (HandlerWeight.measureWeight.isStart()) ;
-                        }
-                    } catch (Exception e) {
-                    }
-                }
-            }).start();
-        }
-
         removeCallbacksAndMessages(null);
         disconnect();
         version = null;
@@ -211,8 +167,8 @@ public class ScaleModule extends Module {
     /**
      * Соединится с модулем.
      */
+    @Override
     public void attach() {
-        //handleResultConnect(ResultConnect.STATUS_ATTACH_START);
         onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
         new Thread(runnableScaleConnect).start();
     }
@@ -234,6 +190,15 @@ public class ScaleModule extends Module {
     }
 
     //==================================================================================================================
+    /**
+     * Получаем версию программы из весового модуля
+     *
+     * @return Версия весового модуля в текстовом виде.
+     * @see InterfaceVersions#CMD_VERSION
+     */
+    public static String getModuleVersion() {
+        return cmd(InterfaceVersions.CMD_VERSION);
+    }
 
     /**
      * Установливаем новое значение АЦП в весовом модуле. Знчение от1 до 15
@@ -602,7 +567,8 @@ public class ScaleModule extends Module {
         return version.writeData();
     }
 
-    private final Runnable runnableScaleConnect = new Runnable() {
+    class RunnableScaleConnect implements Runnable{
+
         @Override
         public void run() {
             try {
@@ -627,30 +593,59 @@ public class ScaleModule extends Module {
             }
             onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
         }
-    };
+    }
 
     /**
      * Класс для обработки показаний батареи и температуры надо использевать после
      * создания класса com.kostya.module.ScaleModule и инициализации метода init().
      */
     public abstract static class HandlerBatteryTemperature {
-        static MeasureBatteryTemperature measureBatteryTemperature;
+        RunnableBatteryTemperature runnableBatteryTemperature;
 
-        /**
-         * Метод посылает значения веса и датчика
-         *
-         * @param battery     результат заряд батареи в процентах
-         * @param temperature результат температуры в градусах
-         * @return возвращяет время для обновления показаний в секундах
+        /** Метод посылает значения веса и датчика.
+         * @param battery     результат заряд батареи в процентах.
+         * @param temperature результат температуры в градусах.
+         * @return возвращяет время для обновления показаний в секундах.
          */
         public abstract int onEvent(int battery, int temperature);
 
-        private class MeasureBatteryTemperature extends Thread {
+        public HandlerBatteryTemperature(){
+            runnableBatteryTemperature = new RunnableBatteryTemperature();
+        }
+
+        /** Метод запускает или останавливает процесс измерения.
+         * @param process true запускаем процесс false останавливаем.
+         */
+        private void process(final boolean process, boolean wait) {
+            try {
+                if (isAttach()) {
+                    if(process){
+                        if (!runnableBatteryTemperature.isStart()) {
+                            new Thread(runnableBatteryTemperature).start();
+                        }
+                    }else{
+                        runnableBatteryTemperature.cancel();
+                    }
+
+                    if (!process){
+                        if(wait){
+                            while (runnableBatteryTemperature.isStart()) {}
+                        }
+                    }
+                }
+
+            } catch (Exception e) {
+            }
+        }
+
+        public void resetAutoNull() {
+            runnableBatteryTemperature.resetNull();
+        }
+
+        private class RunnableBatteryTemperature implements Runnable{
             private boolean start;
             private volatile boolean cancelled;
-            /**
-             * счётчик автообнуления
-             */
+            /** счётчик автообнуления */
             private int autoNull;
             /**
              * Время обновления в секундах
@@ -658,14 +653,10 @@ public class ScaleModule extends Module {
             public int timeUpdate = 1;
 
             @Override
-            public synchronized void start() {
-                //setPriority(Thread.MIN_PRIORITY);
-                super.start();
-                start = true;
-            }
-
-            @Override
             public void run() {
+                start = true;
+                cancelled = false;
+
                 while (!cancelled) {
                     timeUpdate = onEvent(getModuleBatteryCharge(), getModuleTemperature());
                     try { TimeUnit.SECONDS.sleep(timeUpdate); } catch (InterruptedException ignored) {}
@@ -682,66 +673,14 @@ public class ScaleModule extends Module {
                 start = false;
             }
 
-            private synchronized void cancel() {
-                cancelled = true;
-            }
+            private boolean isStart() {return start;}
 
-            private void execute(boolean exe) {
-                if (exe) {
-                    if (!start)
-                        start();
-                } else {
-                    cancel();
-                }
-            }
+            private synchronized void cancel() {  cancelled = true;  }
 
-            private boolean isStart() {
-                return start;
-            }
-
-            private void resetNull() {
-                autoNull = 0;
-            }
-
+            private void resetNull() { autoNull = 0; }
         }
 
-        /**
-         * Метод запускает или останавливает процесс измерения
-         *
-         * @param process true запускаем процесс false останавливаем
-         */
-        private void process(final boolean process, boolean wait) {
-            try {
-                if (isAttach()) {
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (measureBatteryTemperature != null) {
-                                measureBatteryTemperature.execute(false);
-                                while (measureBatteryTemperature.isStart()) ;
-                            }
-                            measureBatteryTemperature = new MeasureBatteryTemperature();
-                            measureBatteryTemperature.execute(process);
-                        }
-                    }).start();
-
-                    if (!process){
-                        if(wait){
-                            while (measureBatteryTemperature.isStart()) {}
-                        }
-                    }
-                }
-
-            } catch (Exception e) {
-            }
-        }
-
-        public void resetAutoNull() {
-            measureBatteryTemperature.resetNull();
-        }
-
-        /** Запускаем измерение.         *
-         */
+        /** Запускаем измерение.  */
         public void start(){
             process(true, false);
         }
@@ -754,12 +693,16 @@ public class ScaleModule extends Module {
         }
     }
 
-    /**
-     * Класс обработки показаний веса и значения датчика. Надо использевать после
-     * создания класса com.kostya.module.ScaleModule и инициализации метода init().
+    /** Класс обработки показаний веса и значения датчика.
+     * Надо использевать после создания класса com.kostya.module.ScaleModule
+     * и инициализации метода init().
      */
     public abstract static class HandlerWeight {
-        static MeasureWeight measureWeight;
+        RunnableWeight runnableWeight;
+
+        public HandlerWeight(){
+            runnableWeight = new RunnableWeight();
+        }
 
         /**
          * Метод возвращяет значения веса и датчика.
@@ -771,21 +714,40 @@ public class ScaleModule extends Module {
          */
         public abstract int onEvent(ResultWeight what, int weight, int sensor);
 
-        private class MeasureWeight extends Thread { //поток получения батареи
-            //final HandlerWeightUpdate h;
-            private boolean start;
+        /**
+         * Метод запускает или останавливает процесс измерения
+         *
+         * @param process true запускаем процесс false останавливаем
+         */
+        private void process(final boolean process, boolean wait) {
+            try {
+                if (isAttach()) {
+                    if(process){
+                        if (!runnableWeight.isStart()) {
+                            new Thread(runnableWeight).start();
+                        }
+                    }else{
+                        runnableWeight.cancel();
+                    }
+
+                    if (!process){
+                        if(wait){
+                            while (runnableWeight.isStart()) {}
+                        }
+                    }
+                }
+            } catch (Exception e) { }
+        }
+
+        private class RunnableWeight implements Runnable{
             private volatile boolean cancelled;
+            private boolean start;
             public int timeUpdate = 50;
 
             @Override
-            public synchronized void start() {
-                //setPriority(Thread.MIN_PRIORITY);
-                super.start();
-                start = true;
-            }
-
-            @Override
             public void run() {
+                start = true;
+                cancelled = false;
                 while (!cancelled) {
                     updateWeight();
                     ResultWeight msg;
@@ -804,50 +766,11 @@ public class ScaleModule extends Module {
                 start = false;
             }
 
+            private boolean isStart() {return start;}
+
             private synchronized void cancel() {
                 cancelled = true;
             }
-
-            private void execute(boolean exe) {
-                if (exe) {
-                    if (!start)
-                        start();
-                } else
-                    cancel();
-            }
-
-            private boolean isStart() {
-                return start;
-            }
-        }
-
-        /**
-         * Метод запускает или останавливает процесс измерения
-         *
-         * @param process true запускаем процесс false останавливаем
-         */
-        private void process(final boolean process, boolean wait) {
-            try {
-                if (isAttach()) {
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (measureWeight != null) {
-                                measureWeight.execute(false);
-                                while (measureWeight.isStart()) {}
-                            }
-                            measureWeight = new MeasureWeight();
-                            measureWeight.execute(process);
-                        }
-                    }).start();
-
-                    if (!process){
-                        if(wait){
-                            while (measureWeight.isStart()) {}
-                        }
-                    }
-                }
-            } catch (Exception e) { }
         }
 
         /** Запускаем измерение.         *

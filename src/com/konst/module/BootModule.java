@@ -2,12 +2,11 @@ package com.konst.module;
 
 import java.io.IOException;
 
-/**
- * Класс для самопрограммирования весового модуля
- *
+/** Класс для самопрограммирования весового модуля.
  * @author Kostya
  */
 public class BootModule extends Module {
+    public RunnableBootConnect runnableBootConnect;
     String version = "";
 
     /**
@@ -17,22 +16,12 @@ public class BootModule extends Module {
      */
     public BootModule(String version, OnEventConnectResult event)throws Exception{
         super(event);
+        runnableBootConnect = new RunnableBootConnect();
         this.version = version;
+
     }
 
-    /**
-     * Инициализация bluetooth адаптера и модуля.
-     * Перед инициализациеи надо создать класс com.kostya.module.BootModule
-     * Для соединения {@link BootModule#attach()}
-     * @param address     адресс bluetooth модуля весов.
-     * @throws Exception Ошибка инициализации.
-     * @see Module#init
-     */
-    public void init( String address) throws Exception {
-        init(address);
-        //attach();
-    }
-
+    @Override
     public void attach() /*throws Throwable*/ {
         onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
         new Thread(runnableBootConnect).start();
@@ -42,15 +31,16 @@ public class BootModule extends Module {
      * Разьеденится с загрузчиком.
      * Вызывать этот метод при закрытии программы.
      */
+    @Override
     public void dettach() {
         removeCallbacksAndMessages(null);
         disconnect();
     }
 
-    /**
-     * Обработчик для процесса соединения
+    /** Обработчик для процесса соединения
      */
-    private final Runnable runnableBootConnect = new Runnable() {
+    class RunnableBootConnect implements Runnable{
+
         @Override
         public void run() {
             try {
@@ -61,7 +51,7 @@ public class BootModule extends Module {
             }
             onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
         }
-    };
+    }
 
     /**
      * Комманда старт программирования.
