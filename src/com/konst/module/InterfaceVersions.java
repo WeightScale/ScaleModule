@@ -103,7 +103,10 @@ public interface InterfaceVersions {
      * Выключить питание модуля
      */
     String CMD_POWER_OFF = "POF";
-
+    /**
+     * Значение сервис кода.
+     */
+    String CMD_SERVICE_COD = "SRC";
     /**
      * коэфициэнт А.
      * Расчитывается при каллибровки весов. Используется для расчета веса.
@@ -133,5 +136,6 @@ public interface InterfaceVersions {
      * @see InterfaceVersions#CMD_DATA
      */
     String CMD_DATA_LMT = "lmt";
+
 
 }

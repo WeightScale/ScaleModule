@@ -13,124 +13,110 @@ import java.util.Set;
 abstract class Versions implements InterfaceVersions {
 
     /**
-     * время выключения весов
+     * Время выключения весов.
      */
     public static int timeOff;
     /**
-     * калибровочный коэффициент a
+     * Калибровочный коэффициент a.
      */
     public static float coefficientA;
     /**
-     * калибровочный коэффициент b
+     * Калибровочный коэффициент b.
      */
     public static float coefficientB;
     /**
-     * максимальный вес для весов
+     * Максимальный вес для весов.
      */
     public static int weightMax;
     /**
-     * АЦП-фильтр (0-15)
+     * АЦП-фильтр (0-15).
      */
     public static int filterADC;
     /**
-     * текущий вес
+     * Текущий вес.
      */
     public static int weight;
     /**
-     * предельный вес взвешивания
+     * Предельный вес взвешивания.
      */
     public static int weightMargin;
     /**
-     * максимальное показание датчика
+     * Максимальное показание датчика.
      */
     public static int limitTenzo;
     /**
-     * предельное показани датчика
+     * Предельное показани датчика.
      */
     static int marginTenzo;
     /**
-     * скорость передачи данных ком порта модуля bluetooth
+     * Скорость передачи данных ком порта модуля bluetooth.
      */
     protected int speed;
     /**
-     * текущее показание датчика веса
+     * Текущее показание датчика веса.
      */
     public static int sensorTenzo;
     /**
-     * разница знечений между значение ноля до и после
+     * Разница знечений между значение ноля до и после.
      */
     protected static int offset;
     /**
-     * калибровочный коэффициент температуры
+     * Калибровочный коэффициент температуры.
      */
     protected float coefficientTemp;
     /**
-     * показание датчика веса с учетом offset
+     * Показание датчика веса с учетом offset.
      */
     protected static int sensorTenzoOffset;
     /**
-     * имя таблици google spreadsheet
+     * Имя таблици google spreadsheet.
      */
     public static String spreadsheet = "";
     /**
-     * имя акаунта google
+     * Имя акаунта google.
      */
     public static String username = "";
     /**
-     * пароль акаунта google
+     * Пароль акаунта google.
      */
     public static String password = "";
     /**
-     * номер телефона админа в формате +38хххххххххх
+     * Номер телефона админа в формате +38хххххххххх.
      */
     public static String phone = "";
 
-    /**
-     * Загружаем значения из весового модуля
-     *
-     * @throws Exception Ошибки при загрузке настроек из весового модуля
+    /**Загружаем значения из весового модуля.
+     * @throws Exception Ошибки при загрузке настроек из весового модуля.
      */
     protected abstract void load() throws Exception;
 
-    /**
-     * Установить ноль
-     *
-     * @return true Установлен offset в весовом модуле
+    /**Установить ноль.
+     * @return true Установлен offset в весовом модуле.
      */
     protected abstract boolean setOffsetScale();
 
-    /**
-     * Определяем значения лимита измерения датчика веса
-     *
+    /**Определяем значения лимита измерения датчика веса.
      * @return true если значения равно лимиту  датчика
      */
     protected abstract boolean isLimit();
 
-    /**
-     * Определяем значения перезруза датчика веса
-     *
+    /**Определяем значения перезруза датчика веса.
      * @return true если значение равно перегрузу
      */
     protected abstract boolean isMargin();
 
-    /**
-     * Получаем новое значение датчика и преобразуем в вес
-     *
-     * @return значение веса
+    /**Получаем новое значение датчика и преобразуем в вес.
+     * @return значение веса.
      */
     protected abstract int updateWeight();
 
-    /**
-     * устанавливаем весы в ноль
-     *
-     * @return true Установлен ноль в весовом модуле
+    /**Устанавливаем весы в ноль.
+     * @return true Установлен ноль в весовом модуле.
      */
     protected abstract boolean setScaleNull();
 
-    /**
-     * Записывем данные в весовой модуль
-     *
-     * @return true значения записаны
+    /**Записывем данные в весовой модуль.
+     * @return true значения записаны.
      */
     protected abstract boolean writeData();
 
@@ -144,9 +130,7 @@ abstract class Versions implements InterfaceVersions {
 
     protected abstract boolean setPhone(String phone);
 
-    /**
-     * Получаем значение установленого фильтра в АЦП
-     *
+    /**Получаем значение установленого фильтра в АЦП.
      * @return значение от 1 до 15
      */
     private static String getFilterADC() {
@@ -219,8 +203,7 @@ abstract class Versions implements InterfaceVersions {
         }
     }
 
-    /**
-     * A simple class that provides utilities to ease command line parsing.
+    /**A simple class that provides utilities to ease command line parsing.
      */
     static class SimpleCommandLineParser {
 

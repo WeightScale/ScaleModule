@@ -86,7 +86,7 @@ public class BootModule extends Module {
      * @return Номер версии.
      */
     public int getBootVersion() {
-        String vrs = cmd("VRS");
+        String vrs = cmd(InterfaceVersions.CMD_VERSION);
         if (vrs.startsWith(version)) {
             try {
                 return Integer.valueOf(vrs.replace(version, ""));

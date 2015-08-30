@@ -22,7 +22,7 @@ public abstract class Module extends Handler {
      */
     private static BluetoothDevice device;
     /**
-     * Bluetooth адаптер терминала
+     * Bluetooth адаптер терминала.
      */
     private static BluetoothAdapter bluetoothAdapter = null;
     private static BluetoothSocket socket;
@@ -30,7 +30,7 @@ public abstract class Module extends Handler {
     private static InputStream is;
     OnEventConnectResult onEventConnectResult;
     /**
-     * Константа время задержки для получения байта
+     * Константа время задержки для получения байта.
      */
     private static final int TIMEOUT_GET_BYTE = 2000;
 
@@ -280,7 +280,14 @@ public abstract class Module extends Handler {
         return bluetoothAdapter;
     }
 
-
-
+    /**
+     * Получаем версию программы из весового модуля
+     *
+     * @return Версия весового модуля в текстовом виде.
+     * @see InterfaceVersions#CMD_VERSION
+     */
+    public static String getModuleVersion() {
+        return cmd(InterfaceVersions.CMD_VERSION);
+    }
 
 }

@@ -190,14 +190,26 @@ public class ScaleModule extends Module {
     }
 
     //==================================================================================================================
+
     /**
-     * Получаем версию программы из весового модуля
+     * Установливаем сервис код.
      *
-     * @return Версия весового модуля в текстовом виде.
-     * @see InterfaceVersions#CMD_VERSION
+     * @param cod Код
+     * @return true Значение установлено
+     * @see InterfaceVersions#CMD_SERVICE_COD
      */
-    public static String getModuleVersion() {
-        return cmd(InterfaceVersions.CMD_VERSION);
+    public static boolean setModuleServiceCod(String cod) {
+        return cmd(InterfaceVersions.CMD_SERVICE_COD + cod).equals(InterfaceVersions.CMD_SERVICE_COD);
+    }
+
+    /**
+     * Получаем сервис код.
+     *
+     * @return код
+     * @see InterfaceVersions#CMD_SERVICE_COD
+     */
+    public static String getModuleServiceCod() {
+        return cmd(InterfaceVersions.CMD_SERVICE_COD);
     }
 
     /**
@@ -704,9 +716,7 @@ public class ScaleModule extends Module {
             runnableWeight = new RunnableWeight();
         }
 
-        /**
-         * Метод возвращяет значения веса и датчика.
-         *
+        /**Метод возвращяет значения веса и датчика.
          * @param what   результат статуса измерения enum ResultWeight.
          * @param weight результат веса.
          * @param sensor результат показаний датчика веса.
@@ -714,10 +724,8 @@ public class ScaleModule extends Module {
          */
         public abstract int onEvent(ResultWeight what, int weight, int sensor);
 
-        /**
-         * Метод запускает или останавливает процесс измерения
-         *
-         * @param process true запускаем процесс false останавливаем
+        /**Метод запускает или останавливает процесс измерения.
+         * @param process true запускаем процесс false останавливаем.
          */
         private void process(final boolean process, boolean wait) {
             try {

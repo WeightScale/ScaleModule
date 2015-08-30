@@ -1,8 +1,6 @@
 package com.konst.module;
 
-/**
- * Класс весового модуля
- *
+/**Класс весового модуля.
  * @version 1
  */
 class V1 extends Versions {
