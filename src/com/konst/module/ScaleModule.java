@@ -16,21 +16,22 @@ import java.util.concurrent.TimeUnit;
  * @author Kostya
  */
 public class ScaleModule extends Module {
-    protected static Versions version;
+    protected Versions version;
     /**
      * Процент батареи (0-100%)
      */
-    protected static int battery;
+    protected int battery;
     /**
      * Погрешность веса автоноль
      */
-    protected static int weightError;
+    protected int weightError;
     /**
      * Время срабатывания авто ноля
      */
-    protected static int timerNull;
-    private static int numVersion;
-    private static String versionName;
+    protected int timerNull;
+    private int numVersion;
+    private String versionName;
+    OnEventResultMeasuring onEventResultMeasuring;
     RunnableScaleConnect runnableScaleConnect;
 
     /**
@@ -55,10 +56,34 @@ public class ScaleModule extends Module {
         WEIGHT_MARGIN
     }
 
+    public ScaleModule(String moduleVersion) throws Exception {
+        runnableScaleConnect = new RunnableScaleConnect();
+        versionName = moduleVersion;
+    }
+
     public ScaleModule(String moduleVersion, OnEventConnectResult event) throws Exception {
         super(event);
         runnableScaleConnect = new RunnableScaleConnect();
         versionName = moduleVersion;
+    }
+
+    HandlerWeight handlerWeight = new HandlerWeight() {
+        @Override
+        public int onEvent(ResultWeight what, int weight, int sensor) {
+            return resultMeasuring.resultWeight(what,weight,sensor);
+        }
+    };
+
+    HandlerBatteryTemperature handlerBatteryTemperature = new HandlerBatteryTemperature() {
+        @Override
+        public int onEvent(int battery, int temperature) {
+            return 5;
+        }
+    };
+
+    public interface OnEventResultMeasuring{
+        int resultWeight(ResultWeight what, int weight, int sensor);
+        int resultBatteryTemperature(int battery, int temperature);
     }
 
     /**
@@ -66,7 +91,7 @@ public class ScaleModule extends Module {
      *
      * @return класс версии весового модуля
      */
-    public static Versions getVersion() {
+    public Versions getVersion() {
         return version;
     }
 
@@ -75,7 +100,7 @@ public class ScaleModule extends Module {
      *
      * @return заряд батареи в процентах
      */
-    public static int getBattery() {
+    public int getBattery() {
         return battery;
     }
 
@@ -84,8 +109,8 @@ public class ScaleModule extends Module {
      *
      * @param battery Заряд батареи в процентах
      */
-    public static void setBattery(int battery) {
-        ScaleModule.battery = battery;
+    public void setBattery(int battery) {
+        this.battery = battery;
     }
 
     /**
@@ -93,7 +118,7 @@ public class ScaleModule extends Module {
      *
      * @return возвращяет значение веса
      */
-    public static int getWeightError() {
+    public int getWeightError() {
         return weightError;
     }
 
@@ -102,8 +127,8 @@ public class ScaleModule extends Module {
      *
      * @param weightError Значение погрешности в килограмах
      */
-    public static void setWeightError(int weightError) {
-        ScaleModule.weightError = weightError;
+    public void setWeightError(int weightError) {
+        this.weightError = weightError;
     }
 
     /**
@@ -111,7 +136,7 @@ public class ScaleModule extends Module {
      *
      * @return возвращяем время после которого установливается автоноль
      */
-    public static int getTimerNull() {
+    public int getTimerNull() {
         return timerNull;
     }
 
@@ -120,8 +145,8 @@ public class ScaleModule extends Module {
      *
      * @param timerNull Значение времени в секундах
      */
-    public static void setTimerNull(int timerNull) {
-        ScaleModule.timerNull = timerNull;
+    public void setTimerNull(int timerNull) {
+        this.timerNull = timerNull;
     }
 
     /**
@@ -140,7 +165,7 @@ public class ScaleModule extends Module {
      *
      * @return true если было присоединение и загрузка версии весового модуля
      */
-    public static boolean isAttach() {
+    public boolean isAttach() {
         return version != null;
     }
 
@@ -150,7 +175,7 @@ public class ScaleModule extends Module {
      *
      * @return true версия правильная
      */
-    public static boolean isScales() {
+    public boolean isScales() {
         String vrs = cmd(InterfaceVersions.CMD_VERSION); //Получаем версию весов
         if (vrs.startsWith(versionName)) {
             try {
@@ -178,12 +203,12 @@ public class ScaleModule extends Module {
      * @return Экземпляр версии.
      * @throws Exception
      */
-    private static Versions fetchVersion(int version) throws Exception {
+    private Versions fetchVersion(int version) throws Exception {
         switch (version) {
             case 1:
-                return new V1();
+                return new V1(this);
             case 4:
-                return new V4();
+                return new V4(this);
             default:
                 throw new Exception("illegal version");
         }
@@ -198,7 +223,7 @@ public class ScaleModule extends Module {
      * @return true Значение установлено
      * @see InterfaceVersions#CMD_SERVICE_COD
      */
-    public static boolean setModuleServiceCod(String cod) {
+    public boolean setModuleServiceCod(String cod) {
         return cmd(InterfaceVersions.CMD_SERVICE_COD + cod).equals(InterfaceVersions.CMD_SERVICE_COD);
     }
 
@@ -208,7 +233,7 @@ public class ScaleModule extends Module {
      * @return код
      * @see InterfaceVersions#CMD_SERVICE_COD
      */
-    public static String getModuleServiceCod() {
+    public String getModuleServiceCod() {
         return cmd(InterfaceVersions.CMD_SERVICE_COD);
     }
 
@@ -219,7 +244,7 @@ public class ScaleModule extends Module {
      * @return true Значение установлено
      * @see InterfaceVersions#CMD_FILTER
      */
-    public static boolean setModuleFilterADC(int filterADC) {
+    public boolean setModuleFilterADC(int filterADC) {
         return cmd(InterfaceVersions.CMD_FILTER + filterADC).equals(InterfaceVersions.CMD_FILTER);
     }
 
@@ -229,7 +254,7 @@ public class ScaleModule extends Module {
      * @return время в минутах
      * @see InterfaceVersions#CMD_TIMER
      */
-    public static String getModuleTimeOff() {
+    public String getModuleTimeOff() {
         return cmd(InterfaceVersions.CMD_TIMER);
     }
 
@@ -240,7 +265,7 @@ public class ScaleModule extends Module {
      * @return true Значение установлено
      * @see InterfaceVersions#CMD_TIMER
      */
-    public static boolean setModuleTimeOff(int timeOff) {
+    public boolean setModuleTimeOff(int timeOff) {
         return cmd(InterfaceVersions.CMD_TIMER + timeOff).equals(InterfaceVersions.CMD_TIMER);
     }
 
@@ -256,7 +281,7 @@ public class ScaleModule extends Module {
      * @return Значение от 1 до 5.
      * @see InterfaceVersions#CMD_SPEED
      */
-    public static String getModuleSpeedPort() {
+    public String getModuleSpeedPort() {
         return cmd(InterfaceVersions.CMD_SPEED);
     }
 
@@ -273,7 +298,7 @@ public class ScaleModule extends Module {
      * @return true - Значение записано.
      * @see InterfaceVersions#CMD_SPEED
      */
-    public static boolean setModuleSpeedPort(int speed) {
+    public boolean setModuleSpeedPort(int speed) {
         return cmd(InterfaceVersions.CMD_SPEED + speed).equals(InterfaceVersions.CMD_SPEED);
     }
 
@@ -283,7 +308,7 @@ public class ScaleModule extends Module {
      * @return Значение офсет.
      * @see InterfaceVersions#CMD_GET_OFFSET
      */
-    public static String getModuleOffsetSensor() {
+    public String getModuleOffsetSensor() {
         return cmd(InterfaceVersions.CMD_GET_OFFSET);
     }
 
@@ -293,7 +318,7 @@ public class ScaleModule extends Module {
      * @return Значение датчика.
      * @see InterfaceVersions#CMD_SENSOR
      */
-    public static String feelWeightSensor() {
+    public String feelWeightSensor() {
         return cmd(InterfaceVersions.CMD_SENSOR);
     }
 
@@ -303,7 +328,7 @@ public class ScaleModule extends Module {
      * @return Заряд батареи в процентах.
      * @see InterfaceVersions#CMD_BATTERY
      */
-    public static int getModuleBatteryCharge() {
+    public int getModuleBatteryCharge() {
         try {
             battery = Integer.valueOf(cmd(InterfaceVersions.CMD_BATTERY));
         } catch (Exception e) {
@@ -320,7 +345,7 @@ public class ScaleModule extends Module {
      * @return true - Заряд установлен.
      * @see InterfaceVersions#CMD_CALL_BATTERY
      */
-    public static boolean setModuleBatteryCharge(int charge) {
+    public boolean setModuleBatteryCharge(int charge) {
         return cmd(InterfaceVersions.CMD_CALL_BATTERY + charge).equals(InterfaceVersions.CMD_CALL_BATTERY);
     }
 
@@ -330,7 +355,7 @@ public class ScaleModule extends Module {
      * @return Температура в градусах.
      * @see InterfaceVersions#CMD_DATA_TEMP
      */
-    public static int getModuleTemperature() {
+    public int getModuleTemperature() {
         try {
             return (int) ((float) ((Integer.valueOf(cmd(InterfaceVersions.CMD_DATA_TEMP)) - 0x800000) / 7169) / 0.81) - 273;
         } catch (Exception e) {
@@ -344,7 +369,7 @@ public class ScaleModule extends Module {
      * @return Hardware версия весового модуля.
      * @see InterfaceVersions#CMD_HARDWARE
      */
-    public static String getModuleHardware() {
+    public String getModuleHardware() {
         return cmd(InterfaceVersions.CMD_HARDWARE);
     }
 
@@ -355,7 +380,7 @@ public class ScaleModule extends Module {
      * @return true - Имя записано в модуль.
      * @see InterfaceVersions#CMD_NAME
      */
-    public static boolean setModuleName(String name) {
+    public boolean setModuleName(String name) {
         return cmd(InterfaceVersions.CMD_NAME + name).equals(InterfaceVersions.CMD_NAME);
     }
 
@@ -366,7 +391,7 @@ public class ScaleModule extends Module {
      * @return true - Калибровка прошла успешно.
      * @see InterfaceVersions#CMD_CALL_BATTERY
      */
-    public static boolean setModuleCalibrateBattery(int percent) {
+    public boolean setModuleCalibrateBattery(int percent) {
         return cmd(InterfaceVersions.CMD_CALL_BATTERY + percent).equals(InterfaceVersions.CMD_CALL_BATTERY);
     }
 
@@ -377,7 +402,7 @@ public class ScaleModule extends Module {
      * @return true - Имя записано успешно.
      * @see Versions#setSpreadsheet(String)
      */
-    public static boolean setModuleSpreadsheet(String sheet) {
+    public boolean setModuleSpreadsheet(String sheet) {
         return version.setSpreadsheet(sheet);
     }
 
@@ -388,7 +413,7 @@ public class ScaleModule extends Module {
      * @return true - Имя записано успешно.
      * @see Versions#setUsername(String)
      */
-    public static boolean setModuleUserName(String username) {
+    public boolean setModuleUserName(String username) {
         return version.setUsername(username);
     }
 
@@ -399,7 +424,7 @@ public class ScaleModule extends Module {
      * @return true - Пароль записано успешно.
      * @see Versions#setPassword(String)
      */
-    public static boolean setModulePassword(String password) {
+    public boolean setModulePassword(String password) {
         return version.setPassword(password);
     }
 
@@ -410,7 +435,7 @@ public class ScaleModule extends Module {
      * @return true - телефон записано успешно.
      * @see Versions#setPhone(String)
      */
-    public static boolean setModulePhone(String phone) {
+    public boolean setModulePhone(String phone) {
         return version.setPhone(phone);
     }
 
@@ -419,7 +444,7 @@ public class ScaleModule extends Module {
      *
      * @return true - питание выключено.
      */
-    public static boolean setModulePowerOff() {
+    public boolean setModulePowerOff() {
         return version.powerOff();
     }
 
@@ -429,8 +454,8 @@ public class ScaleModule extends Module {
      * @return Значение фильтра от 1 до 15.
      * @see Versions#filterADC
      */
-    public static int getFilterADC() {
-        return Versions.filterADC;
+    public int getFilterADC() {
+        return version.filterADC;
     }
 
     /**
@@ -439,144 +464,168 @@ public class ScaleModule extends Module {
      * @param filterADC Значение АЦП.
      * @see Versions#filterADC
      */
-    public static void setFilterADC(int filterADC) {
-        Versions.filterADC = filterADC;
+    public void setFilterADC(int filterADC) {
+        version.filterADC = filterADC;
     }
 
-    public static int getWeightMax() {
-        return Versions.weightMax;
+    public int getWeightMax() {
+        return version.weightMax;
     }
 
-    public static void setWeightMax(int weightMax) {
-        Versions.weightMax = weightMax;
+    public void setWeightMax(int weightMax) {
+        version.weightMax = weightMax;
     }
 
-    public static int getLimitTenzo() {
-        return Versions.limitTenzo;
+    public int getLimitTenzo() {
+        return version.limitTenzo;
     }
 
-    public static void setLimitTenzo(int limitTenzo) {
-        Versions.limitTenzo = limitTenzo;
+    public void setLimitTenzo(int limitTenzo) {
+        version.limitTenzo = limitTenzo;
     }
 
-    public static String getPhone() {
-        return Versions.phone;
+    public String getPhone() {
+        return version.phone;
     }
 
-    public static void setPhone(String phone) {
-        Versions.phone = phone;
+    public void setPhone(String phone) {
+        version.phone = phone;
     }
 
-    public static int getTimeOff() {
-        return Versions.timeOff;
+    public int getTimeOff() {
+        return version.timeOff;
     }
 
-    public static void setTimeOff(int timeOff) {
-        Versions.timeOff = timeOff;
+    public void setTimeOff(int timeOff) {
+        version.timeOff = timeOff;
     }
 
-    public static float getCoefficientA() {
-        return Versions.coefficientA;
+    public float getCoefficientA() {
+        return version.coefficientA;
     }
 
-    public static void setCoefficientA(float coefficientA) {
-        Versions.coefficientA = coefficientA;
+    public void setCoefficientA(float coefficientA) {
+        version.coefficientA = coefficientA;
     }
 
-    public static float getCoefficientB() {
-        return Versions.coefficientB;
+    public float getCoefficientB() {
+        return version.coefficientB;
     }
 
-    public static void setCoefficientB(float coefficientB) {
-        Versions.coefficientB = coefficientB;
+    public void setCoefficientB(float coefficientB) {
+        version.coefficientB = coefficientB;
     }
 
-    public static String getSpreadSheet() {
-        return Versions.spreadsheet;
+    public String getSpreadSheet() {
+        return version.spreadsheet;
     }
 
-    public static void setSpreadSheet(String spreadSheet) {
-        Versions.spreadsheet = spreadSheet;
+    public void setSpreadSheet(String spreadSheet) {
+        version.spreadsheet = spreadSheet;
     }
 
-    public static String getUserName() {
-        return Versions.username;
+    public String getUserName() {
+        return version.username;
     }
 
-    public static void setUserName(String userName) {
-        Versions.username = userName;
+    public void setUserName(String userName) {
+        version.username = userName;
     }
 
-    public static String getPassword() {
-        return Versions.password;
+    public String getPassword() {
+        return version.password;
     }
 
-    public static void setPassword(String password) {
-        Versions.password = password;
+    public void setPassword(String password) {
+        version.password = password;
     }
 
-    public static int getSensorTenzo() {
+    public int getSensorTenzo() {
         return version.getSensorTenzo();
     }
 
-    public static void setSensorTenzo(int sensorTenzo) {
-        Versions.sensorTenzo = sensorTenzo;
+    public void setSensorTenzo(int sensorTenzo) {
+        version.sensorTenzo = sensorTenzo;
     }
 
-    public static int getWeightMargin() {
-        return Versions.weightMargin;
+    public int getWeightMargin() {
+        return version.weightMargin;
     }
 
-    public static void setWeightMargin(int weightMargin) {
-        Versions.weightMargin = weightMargin;
+    public void setWeightMargin(int weightMargin) {
+        version.weightMargin = weightMargin;
     }
 
-    public static int getNumVersion() {
+    public int getNumVersion() {
         return numVersion;
     }
 
-    public static void setNumVersion(int version) {
+    public void setNumVersion(int version) {
         numVersion = version;
     }
 
-    public static String getNameBluetoothDevice() {
+    public String getNameBluetoothDevice() {
         return getDevice().getName();
     }
 
-    public static String getAddressBluetoothDevice() {
+    public String getAddressBluetoothDevice() {
         return getDevice().getAddress();
     }
 
-    public static int getMarginTenzo() {
-        return Versions.getMarginTenzo();
+    public int getMarginTenzo() {
+        return version.getMarginTenzo();
     }
 
-    public static void load() throws Exception {
+    public void load() throws Exception {
         version.load();
     }
 
-    public static boolean setOffsetScale() {
+    public boolean setOffsetScale() {
         return version.setOffsetScale();
     }
 
-    public static boolean isLimit() {
+    public boolean isLimit() {
         return version.isLimit();
     }
 
-    public static boolean isMargin() {
+    public boolean isMargin() {
         return version.isMargin();
     }
 
-    public static int updateWeight() {
+    public int updateWeight() {
         return version.updateWeight();
     }
 
-    public static boolean setScaleNull() {
+    public boolean setScaleNull() {
         return version.setScaleNull();
     }
 
-    public static boolean writeData() {
+    public boolean writeData() {
         return version.writeData();
+    }
+
+    public void startMeasuringWeight(){
+        handlerWeight.start();
+    }
+    public void stopMeasuringWeight(boolean flag){
+        handlerWeight.stop(flag);
+    }
+
+    public void startMeasuringBatteryTemperature(){
+        handlerBatteryTemperature.start();
+    }
+    public void stopMeasuringBatteryTemperature(boolean flag){
+        handlerBatteryTemperature.stop(flag);
+    }
+
+    public void setOnEventResultMeasuring(OnEventResultMeasuring onEventResultMeasuring) {
+        //this.onEventResultMeasuring = onEventResultMeasuring;
+        handlerWeight.setResultMeasuring(onEventResultMeasuring);
+        //handlerBatteryTemperature.setResultMeasuring(onEventResultMeasuring);
+    }
+
+    public void resetAutoNull(){
+        handlerBatteryTemperature.resetAutoNull();
     }
 
     class RunnableScaleConnect implements Runnable{
@@ -611,12 +660,13 @@ public class ScaleModule extends Module {
      * Класс для обработки показаний батареи и температуры надо использевать после
      * создания класса com.kostya.module.ScaleModule и инициализации метода init().
      */
-    public abstract static class HandlerBatteryTemperature {
+    public abstract class HandlerBatteryTemperature {
         RunnableBatteryTemperature runnableBatteryTemperature;
+        //OnEventResultMeasuring resultMeasuring;
 
         /** Метод посылает значения веса и датчика.
-         * @param battery     результат заряд батареи в процентах.
-         * @param temperature результат температуры в градусах.
+         //* @param battery     результат заряд батареи в процентах.
+         //* @param temperature результат температуры в градусах.
          * @return возвращяет время для обновления показаний в секундах.
          */
         public abstract int onEvent(int battery, int temperature);
@@ -624,6 +674,10 @@ public class ScaleModule extends Module {
         public HandlerBatteryTemperature(){
             runnableBatteryTemperature = new RunnableBatteryTemperature();
         }
+
+        /*public void setResultMeasuring(OnEventResultMeasuring resultMeasuring) {
+            this.resultMeasuring = resultMeasuring;
+        }*/
 
         /** Метод запускает или останавливает процесс измерения.
          * @param process true запускаем процесс false останавливаем.
@@ -672,7 +726,7 @@ public class ScaleModule extends Module {
                 while (!cancelled) {
                     timeUpdate = onEvent(getModuleBatteryCharge(), getModuleTemperature());
                     try { TimeUnit.SECONDS.sleep(timeUpdate); } catch (InterruptedException ignored) {}
-                    if (Versions.weight != Integer.MIN_VALUE && Math.abs(Versions.weight) < weightError) { //автоноль
+                    if (version.weight != Integer.MIN_VALUE && Math.abs(version.weight) < weightError) { //автоноль
                         autoNull += 1;
                         if (autoNull > timerNull / InterfaceVersions.DIVIDER_AUTO_NULL) {
                             setOffsetScale();
@@ -709,11 +763,17 @@ public class ScaleModule extends Module {
      * Надо использевать после создания класса com.kostya.module.ScaleModule
      * и инициализации метода init().
      */
-    public abstract static class HandlerWeight {
+    public abstract class HandlerWeight {
         RunnableWeight runnableWeight;
+        OnEventResultMeasuring resultMeasuring;
 
         public HandlerWeight(){
             runnableWeight = new RunnableWeight();
+            //resultMeasuring = onEventResultMeasuring;
+        }
+
+        public void setResultMeasuring(OnEventResultMeasuring resultMeasuring) {
+            this.resultMeasuring = resultMeasuring;
         }
 
         /**Метод возвращяет значения веса и датчика.
@@ -759,7 +819,7 @@ public class ScaleModule extends Module {
                 while (!cancelled) {
                     updateWeight();
                     ResultWeight msg;
-                    if (Versions.weight == Integer.MIN_VALUE) {
+                    if (version.weight == Integer.MIN_VALUE) {
                         msg = ResultWeight.WEIGHT_ERROR;
                     } else {
                         if (isLimit())
@@ -768,7 +828,7 @@ public class ScaleModule extends Module {
                             msg = ResultWeight.WEIGHT_NORMAL;
                         }
                     }
-                    timeUpdate = onEvent(msg, Versions.weight, getSensorTenzo());
+                    timeUpdate = onEvent(msg, version.weight, getSensorTenzo());
                     try { Thread.sleep(timeUpdate); } catch ( InterruptedException ignored) {}
                 }
                 start = false;

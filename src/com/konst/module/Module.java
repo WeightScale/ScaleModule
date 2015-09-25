@@ -20,14 +20,14 @@ public abstract class Module extends Handler {
     /**
      * Bluetooth устройство модуля весов.
      */
-    private static BluetoothDevice device;
+    private BluetoothDevice device;
     /**
      * Bluetooth адаптер терминала.
      */
-    private static BluetoothAdapter bluetoothAdapter = null;
-    private static BluetoothSocket socket;
-    private static OutputStream os;
-    private static InputStream is;
+    private BluetoothAdapter bluetoothAdapter = null;
+    private BluetoothSocket socket;
+    private OutputStream os;
+    private InputStream is;
     OnEventConnectResult onEventConnectResult;
     /**
      * Константа время задержки для получения байта.
@@ -80,7 +80,25 @@ public abstract class Module extends Handler {
     boolean flagTimeout;
     Handler handler = new Handler();
 
-    Module(OnEventConnectResult event) throws Exception{
+    public Module() throws Exception{
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if(bluetoothAdapter == null)
+            throw new Exception("Bluetooth adapter missing");
+        bluetoothAdapter.enable();
+
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!bluetoothAdapter.isEnabled())
+                    flagTimeout = true;
+            }
+        }, 5000);
+        while (!bluetoothAdapter.isEnabled() && !flagTimeout) ;//ждем включения bluetooth
+        if(flagTimeout)
+            throw new Exception("Timeout enabled bluetooth");
+    }
+
+    public Module(OnEventConnectResult event) throws Exception{
         onEventConnectResult = event;
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
@@ -97,6 +115,10 @@ public abstract class Module extends Handler {
         while (!bluetoothAdapter.isEnabled() && !flagTimeout) ;//ждем включения bluetooth
         if(flagTimeout)
             throw new Exception("Timeout enabled bluetooth");
+    }
+
+    public void setOnEventConnectResult(OnEventConnectResult onEventConnectResult) {
+        this.onEventConnectResult = onEventConnectResult;
     }
 
     /** Инициализация bluetooth адаптера и модуля.
@@ -130,7 +152,7 @@ public abstract class Module extends Handler {
      * Если вернулась пустая строка то команда не выполнена.
      * @see InterfaceVersions
      */
-    protected static synchronized String cmd(String cmd) {
+    protected synchronized String cmd(String cmd) {
         try {
             int t = is.available();
             if (t > 0) {
@@ -164,14 +186,14 @@ public abstract class Module extends Handler {
         } catch (Exception ioe) {
             try {
                 connect();
-            } catch (IOException e) {
+            } catch (IOException | NullPointerException e) {
                 try { TimeUnit.SECONDS.sleep(1); } catch (InterruptedException e1) { }
             }
         }
         return "";
     }
 
-    private static synchronized void sendCommand(String cmd) throws IOException {
+    private synchronized void sendCommand(String cmd) throws IOException {
         os.write(cmd.getBytes());
         os.write((byte) 0x0D);
         os.write((byte) 0x0A);
@@ -184,7 +206,7 @@ public abstract class Module extends Handler {
      * @param ch Байт для отсылки.
      * @return true - байт отослан без ошибки.
      */
-    public static synchronized boolean sendByte(byte ch) {
+    public synchronized boolean sendByte(byte ch) {
         try {
             int t = is.available();
             if (t > 0) {
@@ -207,7 +229,7 @@ public abstract class Module extends Handler {
      *
      * @return Принятый байт.
      */
-    public static synchronized int getByte() {
+    public synchronized int getByte() {
 
         try {
             for (int i = 0; i < TIMEOUT_GET_BYTE; i++) {
@@ -232,7 +254,7 @@ public abstract class Module extends Handler {
      *
      * @throws IOException Ошибка соединения.
      */
-    protected static synchronized void connect() throws IOException {
+    protected synchronized void connect() throws IOException, NullPointerException {
         disconnect();
         // Get a BluetoothSocket for a connection with the given BluetoothDevice
         socket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
@@ -245,7 +267,7 @@ public abstract class Module extends Handler {
     /**
      * Получаем разьединение с bluetooth весовым модулем
      */
-    protected static void disconnect() { //рассоединиться
+    protected void disconnect() { //рассоединиться
         try {
             if (is != null)
                 is.close();
@@ -267,7 +289,7 @@ public abstract class Module extends Handler {
      *
      * @return bluetooth устройство.
      */
-    public static BluetoothDevice getDevice() {
+    public BluetoothDevice getDevice() {
         return device;
     }
 
@@ -286,7 +308,7 @@ public abstract class Module extends Handler {
      * @return Версия весового модуля в текстовом виде.
      * @see InterfaceVersions#CMD_VERSION
      */
-    public static String getModuleVersion() {
+    public String getModuleVersion() {
         return cmd(InterfaceVersions.CMD_VERSION);
     }
 

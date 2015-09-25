@@ -5,17 +5,17 @@ package com.konst.module;
  */
 public interface OnEventConnectResult {
 
-    /**Сообщения о результате соединения.
-     * Используется при инициализации метода init().
-     * @param what Результат соединения константа ResultConnect
+    /**РЎРѕРѕР±С‰РµРЅРёСЏ Рѕ СЂРµР·СѓР»СЊС‚Р°С‚Рµ СЃРѕРµРґРёРЅРµРЅРёСЏ.
+     * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё РјРµС‚РѕРґР° init().
+     * @param what Р РµР·СѓР»СЊС‚Р°С‚ СЃРѕРµРґРёРЅРµРЅРёСЏ РєРѕРЅСЃС‚Р°РЅС‚Р° ResultConnect
      * @see Module.ResultConnect
      */
     void handleResultConnect(Module.ResultConnect what);
 
-    /**Сообщения об ошибках соединения.
-     * Используется при инициализаци метода init().
-     * @param what  Результат какая ошибака константа Error
-     * @param error описание ошибки
+    /**РЎРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєР°С… СЃРѕРµРґРёРЅРµРЅРёСЏ.
+     * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†Рё РјРµС‚РѕРґР° init().
+     * @param what  Р РµР·СѓР»СЊС‚Р°С‚ РєР°РєР°СЏ РѕС€РёР±Р°РєР° РєРѕРЅСЃС‚Р°РЅС‚Р° Error
+     * @param error РѕРїРёСЃР°РЅРёРµ РѕС€РёР±РєРё
      * @see Module.ResultError
      */
     void handleConnectError(Module.ResultError what, String error);

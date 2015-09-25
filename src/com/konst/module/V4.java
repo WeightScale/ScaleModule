@@ -7,6 +7,10 @@ import java.util.Iterator;
  */
 class V4 extends Versions {
 
+    public V4(ScaleModule module) {
+        super(module);
+    }
+
     /**Загрузить сохраненные параметры из модуля.
      * @throws Exception Ошибка загрузки параметров.
      */
@@ -18,18 +22,18 @@ class V4 extends Versions {
         loadTimeOff();
         //======================================================================
         try {
-            offset = Integer.valueOf(ScaleModule.getModuleOffsetSensor());
+            offset = Integer.valueOf(module.getModuleOffsetSensor());
         } catch (Exception e) {
             throw new ErrorModuleException("Сделать обнуление в настройках");
         }
         //======================================================================
-        spreadsheet = Module.cmd(InterfaceVersions.CMD_SPREADSHEET);
-        username = Module.cmd(InterfaceVersions.CMD_G_USER);
-        password = Module.cmd(InterfaceVersions.CMD_G_PASS);
-        phone = Module.cmd(InterfaceVersions.CMD_PHONE);
+        spreadsheet = module.cmd(InterfaceVersions.CMD_SPREADSHEET);
+        username = module.cmd(InterfaceVersions.CMD_G_USER);
+        password = module.cmd(InterfaceVersions.CMD_G_PASS);
+        phone = module.cmd(InterfaceVersions.CMD_PHONE);
         //======================================================================
 
-        isDataValid(Module.cmd(InterfaceVersions.CMD_DATA));
+        isDataValid(module.cmd(InterfaceVersions.CMD_DATA));
 
         weightMargin = (int) (weightMax * 1.2);
         marginTenzo = (int) ((weightMax / coefficientA) * 1.2);
@@ -42,7 +46,7 @@ class V4 extends Versions {
     @Override
     protected synchronized int updateWeight() {
         try {
-            sensorTenzoOffset = Integer.valueOf(Module.cmd(InterfaceVersions.CMD_SENSOR_OFFSET));
+            sensorTenzoOffset = Integer.valueOf(module.cmd(InterfaceVersions.CMD_SENSOR_OFFSET));
             return weight = (int) (coefficientA * sensorTenzoOffset);
         } catch (Exception e) {
             return sensorTenzoOffset = weight = Integer.MIN_VALUE;
@@ -62,7 +66,7 @@ class V4 extends Versions {
      */
     @Override
     protected synchronized boolean setOffsetScale() { //обнуление
-        return Module.cmd(InterfaceVersions.CMD_SET_OFFSET).equals(InterfaceVersions.CMD_SET_OFFSET);
+        return module.cmd(InterfaceVersions.CMD_SET_OFFSET).equals(InterfaceVersions.CMD_SET_OFFSET);
     }
 
     /**Записать данные параметров в модуль.
@@ -71,7 +75,7 @@ class V4 extends Versions {
      */
     @Override
     protected boolean writeData() {
-        return Module.cmd(InterfaceVersions.CMD_DATA +
+        return module.cmd(InterfaceVersions.CMD_DATA +
                 InterfaceVersions.CMD_DATA_CFA + '=' + coefficientA + ' ' +
                 InterfaceVersions.CMD_DATA_WGM + '=' + weightMax + ' ' +
                 InterfaceVersions.CMD_DATA_LMT + '=' + limitTenzo).equals(InterfaceVersions.CMD_DATA);
@@ -138,22 +142,22 @@ class V4 extends Versions {
 
     @Override
     protected boolean setSpreadsheet(String sheet) {
-        return Module.cmd(InterfaceVersions.CMD_SPREADSHEET + sheet).equals(InterfaceVersions.CMD_SPREADSHEET);
+        return module.cmd(InterfaceVersions.CMD_SPREADSHEET + sheet).equals(InterfaceVersions.CMD_SPREADSHEET);
     }
 
     @Override
     protected boolean setUsername(String username) {
-        return Module.cmd(InterfaceVersions.CMD_G_USER + username).equals(InterfaceVersions.CMD_G_USER);
+        return module.cmd(InterfaceVersions.CMD_G_USER + username).equals(InterfaceVersions.CMD_G_USER);
     }
 
     @Override
     protected boolean setPassword(String password) {
-        return Module.cmd(InterfaceVersions.CMD_G_PASS + password).equals(InterfaceVersions.CMD_G_PASS);
+        return module.cmd(InterfaceVersions.CMD_G_PASS + password).equals(InterfaceVersions.CMD_G_PASS);
     }
 
     @Override
     protected boolean setPhone(String phone) {
-        return Module.cmd(InterfaceVersions.CMD_PHONE + phone).equals(InterfaceVersions.CMD_PHONE);
+        return module.cmd(InterfaceVersions.CMD_PHONE + phone).equals(InterfaceVersions.CMD_PHONE);
     }
 
 }

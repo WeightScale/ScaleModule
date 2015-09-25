@@ -11,43 +11,43 @@ import java.util.Set;
  * @author Kostya
  */
 abstract class Versions implements InterfaceVersions {
-
+    ScaleModule module;
     /**
      * Время выключения весов.
      */
-    public static int timeOff;
+    public int timeOff;
     /**
      * Калибровочный коэффициент a.
      */
-    public static float coefficientA;
+    public float coefficientA;
     /**
      * Калибровочный коэффициент b.
      */
-    public static float coefficientB;
+    public float coefficientB;
     /**
      * Максимальный вес для весов.
      */
-    public static int weightMax;
+    public int weightMax;
     /**
      * АЦП-фильтр (0-15).
      */
-    public static int filterADC;
+    public int filterADC;
     /**
      * Текущий вес.
      */
-    public static int weight;
+    public int weight;
     /**
      * Предельный вес взвешивания.
      */
-    public static int weightMargin;
+    public int weightMargin;
     /**
      * Максимальное показание датчика.
      */
-    public static int limitTenzo;
+    public int limitTenzo;
     /**
      * Предельное показани датчика.
      */
-    static int marginTenzo;
+    int marginTenzo;
     /**
      * Скорость передачи данных ком порта модуля bluetooth.
      */
@@ -55,11 +55,11 @@ abstract class Versions implements InterfaceVersions {
     /**
      * Текущее показание датчика веса.
      */
-    public static int sensorTenzo;
+    public int sensorTenzo;
     /**
      * Разница знечений между значение ноля до и после.
      */
-    protected static int offset;
+    protected int offset;
     /**
      * Калибровочный коэффициент температуры.
      */
@@ -67,23 +67,27 @@ abstract class Versions implements InterfaceVersions {
     /**
      * Показание датчика веса с учетом offset.
      */
-    protected static int sensorTenzoOffset;
+    protected int sensorTenzoOffset;
     /**
      * Имя таблици google spreadsheet.
      */
-    public static String spreadsheet = "";
+    public String spreadsheet = "";
     /**
      * Имя акаунта google.
      */
-    public static String username = "";
+    public String username = "";
     /**
      * Пароль акаунта google.
      */
-    public static String password = "";
+    public String password = "";
     /**
      * Номер телефона админа в формате +38хххххххххх.
      */
-    public static String phone = "";
+    public String phone = "";
+
+    public Versions(ScaleModule module) {
+        this.module = module;
+    }
 
     /**Загружаем значения из весового модуля.
      * @throws Exception Ошибки при загрузке настроек из весового модуля.
@@ -133,38 +137,38 @@ abstract class Versions implements InterfaceVersions {
     /**Получаем значение установленого фильтра в АЦП.
      * @return значение от 1 до 15
      */
-    private static String getFilterADC() {
-        return Module.cmd(InterfaceVersions.CMD_FILTER);
+    private String getFilterADC() {
+        return module.cmd(InterfaceVersions.CMD_FILTER);
     }
 
     protected void loadFilterADC() throws Exception {
         filterADC = Integer.valueOf(getFilterADC());
         if (filterADC < 0 || filterADC > InterfaceVersions.MAX_ADC_FILTER) {
-            if (!ScaleModule.setModuleFilterADC(InterfaceVersions.DEFAULT_ADC_FILTER))
+            if (!module.setModuleFilterADC(InterfaceVersions.DEFAULT_ADC_FILTER))
                 throw new ErrorModuleException("Фильтер АЦП не установлен в настройках");
             filterADC = InterfaceVersions.DEFAULT_ADC_FILTER;
         }
     }
 
     protected void loadTimeOff() throws Exception {
-        timeOff = Integer.valueOf(ScaleModule.getModuleTimeOff());
+        timeOff = Integer.valueOf(module.getModuleTimeOff());
         if (timeOff < InterfaceVersions.MIN_TIME_OFF || timeOff > InterfaceVersions.MAX_TIME_OFF) {
-            if (!ScaleModule.setModuleTimeOff(InterfaceVersions.MIN_TIME_OFF))
+            if (!module.setModuleTimeOff(InterfaceVersions.MIN_TIME_OFF))
                 throw new ErrorModuleException("Таймер выключения не установлен в настройках");
             timeOff = InterfaceVersions.MIN_TIME_OFF;
         }
     }
 
     protected void loadSpeedModule() throws Exception {
-        speed = Integer.valueOf(ScaleModule.getModuleSpeedPort());
+        speed = Integer.valueOf(module.getModuleSpeedPort());
         if (speed < 1 || speed > 5) {
-            if (!ScaleModule.setModuleSpeedPort(5))
+            if (!module.setModuleSpeedPort(5))
                 throw new ErrorModuleException("Скорость передачи не установлена в настройках");
             speed = 5;
         }
     }
 
-    protected static int getMarginTenzo() {
+    protected int getMarginTenzo() {
         return marginTenzo;
     }
 
@@ -172,10 +176,10 @@ abstract class Versions implements InterfaceVersions {
      * @return true - питание модкля выключено.
      */
     protected boolean powerOff() {
-        return Module.cmd(CMD_POWER_OFF).equals(CMD_POWER_OFF);
+        return module.cmd(CMD_POWER_OFF).equals(CMD_POWER_OFF);
     }
 
-    protected static class ErrorTerminalException extends Exception {
+    protected class ErrorTerminalException extends Exception {
 
         private static final long serialVersionUID = -5686828330979812580L;
 
@@ -189,7 +193,7 @@ abstract class Versions implements InterfaceVersions {
         }
     }
 
-    protected static class ErrorModuleException extends Exception {
+    protected class ErrorModuleException extends Exception {
 
         private static final long serialVersionUID = -5592575601519548599L;
 
@@ -205,7 +209,7 @@ abstract class Versions implements InterfaceVersions {
 
     /**A simple class that provides utilities to ease command line parsing.
      */
-    static class SimpleCommandLineParser {
+    class SimpleCommandLineParser {
 
         private final Map<String, String> argMap;
 
