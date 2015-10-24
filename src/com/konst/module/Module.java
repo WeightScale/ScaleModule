@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Kostya
  */
-public abstract class Module extends Handler {
+public abstract class Module extends Handler implements InterfaceVersions {
     /**
      * Bluetooth устройство модуля весов.
      */
@@ -24,7 +24,7 @@ public abstract class Module extends Handler {
     /**
      * Bluetooth адаптер терминала.
      */
-    private BluetoothAdapter bluetoothAdapter = null;
+    private final BluetoothAdapter bluetoothAdapter;
     private BluetoothSocket socket;
     private OutputStream os;
     private InputStream is;
@@ -45,7 +45,7 @@ public abstract class Module extends Handler {
         /**
          * Неизвесная вервия весового модуля
          */
-        STATUS_SCALE_UNKNOWN,
+        STATUS_VERSION_UNKNOWN,
         /**
          * Конец стадии присоединения (можно использовать для закрытия прогресс диалога)
          */
@@ -78,9 +78,9 @@ public abstract class Module extends Handler {
     public abstract void attach();
 
     boolean flagTimeout;
-    Handler handler = new Handler();
+    final Handler handler = new Handler();
 
-    public Module() throws Exception{
+    protected Module() throws Exception{
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
             throw new Exception("Bluetooth adapter missing");
@@ -96,10 +96,10 @@ public abstract class Module extends Handler {
         while (!bluetoothAdapter.isEnabled() && !flagTimeout) ;//ждем включения bluetooth
         if(flagTimeout)
             throw new Exception("Timeout enabled bluetooth");
+        Commands.setInterfaceCommand(this);
     }
 
-    public Module(OnEventConnectResult event) throws Exception{
-        onEventConnectResult = event;
+    protected Module(OnEventConnectResult event) throws Exception{
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
             throw new Exception("Bluetooth adapter missing");
@@ -115,6 +115,8 @@ public abstract class Module extends Handler {
         while (!bluetoothAdapter.isEnabled() && !flagTimeout) ;//ждем включения bluetooth
         if(flagTimeout)
             throw new Exception("Timeout enabled bluetooth");
+        onEventConnectResult = event;
+        Commands.setInterfaceCommand(this);
     }
 
     public void setOnEventConnectResult(OnEventConnectResult onEventConnectResult) {
@@ -152,17 +154,18 @@ public abstract class Module extends Handler {
      * Если вернулась пустая строка то команда не выполнена.
      * @see InterfaceVersions
      */
-    protected synchronized String cmd(String cmd) {
+    @Override
+    public synchronized String cmd(Commands cmd) {
         try {
             int t = is.available();
             if (t > 0) {
                 is.read(new byte[t]);
             }
 
-            sendCommand(cmd);
+            sendCommand(cmd.toString());
             StringBuilder response = new StringBuilder();
 
-            for (int i = 0; i < 400 && response.length() < 129; ++i) {
+            for (int i = 0; i < cmd.getTimeOut() && response.length() < 129; ++i) {
                 Thread.sleep(1L);
                 if (is.available() > 0) {
                     i = 0;
@@ -174,8 +177,8 @@ public abstract class Module extends Handler {
                     if (ch == '\r')
                         continue;
                     if (ch == '\n')
-                        if (response.toString().startsWith(cmd.substring(0, 3)))
-                            return response.replace(0, 3, "").toString().isEmpty() ? cmd.substring(0, 3) : response.toString();
+                        if (response.toString().startsWith(cmd.getName()))
+                            return response.replace(0, 3, "").toString().isEmpty() ? cmd.getName() : response.toString();
                         else
                             return "";
 
@@ -193,6 +196,10 @@ public abstract class Module extends Handler {
         return "";
     }
 
+    /** Отправить команду.
+     * @param cmd Команда.
+     * @throws IOException
+     */
     private synchronized void sendCommand(String cmd) throws IOException {
         os.write(cmd.getBytes());
         os.write((byte) 0x0D);
@@ -306,10 +313,27 @@ public abstract class Module extends Handler {
      * Получаем версию программы из весового модуля
      *
      * @return Версия весового модуля в текстовом виде.
-     * @see InterfaceVersions#CMD_VERSION
+     * @see Commands#CMD_VERSION
      */
     public String getModuleVersion() {
-        return cmd(InterfaceVersions.CMD_VERSION);
+        return Commands.CMD_VERSION.getParam();
+    }
+
+    /** Возвращяем имя bluetooth утройства.
+     * @return Имя bluetooth.
+     */
+    public CharSequence getNameBluetoothDevice() {
+        return device.getName();
+    }
+
+    /**
+     * Получаем версию hardware весового модуля.
+     *
+     * @return Hardware версия весового модуля.
+     * @see Commands#CMD_HARDWARE
+     */
+    public String getModuleHardware() {
+        return Commands.CMD_HARDWARE.getParam();
     }
 
 }

@@ -1,7 +1,7 @@
 package com.konst.module;
 
 /**
- * Created by Kostya on 07.07.2015.
+ * @author Kostya
  */
 public interface OnEventConnectResult {
 

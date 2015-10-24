@@ -10,8 +10,8 @@ import java.util.Set;
  *
  * @author Kostya
  */
-abstract class Versions implements InterfaceVersions {
-    ScaleModule module;
+abstract class Versions  {
+    final ScaleModule module;
     /**
      * Время выключения весов.
      */
@@ -48,10 +48,7 @@ abstract class Versions implements InterfaceVersions {
      * Предельное показани датчика.
      */
     int marginTenzo;
-    /**
-     * Скорость передачи данных ком порта модуля bluetooth.
-     */
-    protected int speed;
+    private int speedPort;
     /**
      * Текущее показание датчика веса.
      */
@@ -85,7 +82,7 @@ abstract class Versions implements InterfaceVersions {
      */
     public String phone = "";
 
-    public Versions(ScaleModule module) {
+    protected Versions(ScaleModule module) {
         this.module = module;
     }
 
@@ -138,7 +135,7 @@ abstract class Versions implements InterfaceVersions {
      * @return значение от 1 до 15
      */
     private String getFilterADC() {
-        return module.cmd(InterfaceVersions.CMD_FILTER);
+        return Commands.CMD_FILTER.getParam();
     }
 
     protected void loadFilterADC() throws Exception {
@@ -160,11 +157,11 @@ abstract class Versions implements InterfaceVersions {
     }
 
     protected void loadSpeedModule() throws Exception {
-        speed = Integer.valueOf(module.getModuleSpeedPort());
-        if (speed < 1 || speed > 5) {
+        setSpeedPort(Integer.valueOf(module.getModuleSpeedPort()));
+        if (getSpeedPort() < 1 || getSpeedPort() > 5) {
             if (!module.setModuleSpeedPort(5))
                 throw new ErrorModuleException("Скорость передачи не установлена в настройках");
-            speed = 5;
+            setSpeedPort(5);
         }
     }
 
@@ -176,10 +173,21 @@ abstract class Versions implements InterfaceVersions {
      * @return true - питание модкля выключено.
      */
     protected boolean powerOff() {
-        return module.cmd(CMD_POWER_OFF).equals(CMD_POWER_OFF);
+        return Commands.CMD_POWER_OFF.getParam().equals(Commands.CMD_POWER_OFF.getName());
     }
 
-    protected class ErrorTerminalException extends Exception {
+    /**
+     * Скорость передачи данных ком порта модуля bluetooth.
+     */
+    public int getSpeedPort() {
+        return speedPort;
+    }
+
+    public void setSpeedPort(int speedPort) {
+        this.speedPort = speedPort;
+    }
+
+    protected static class ErrorTerminalException extends Exception {
 
         private static final long serialVersionUID = -5686828330979812580L;
 
@@ -193,7 +201,7 @@ abstract class Versions implements InterfaceVersions {
         }
     }
 
-    protected class ErrorModuleException extends Exception {
+    protected static class ErrorModuleException extends Exception {
 
         private static final long serialVersionUID = -5592575601519548599L;
 
@@ -209,7 +217,7 @@ abstract class Versions implements InterfaceVersions {
 
     /**A simple class that provides utilities to ease command line parsing.
      */
-    class SimpleCommandLineParser {
+    static class SimpleCommandLineParser {
 
         private final Map<String, String> argMap;
 

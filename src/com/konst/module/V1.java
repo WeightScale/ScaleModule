@@ -15,7 +15,9 @@ class V1 extends Versions {
         //==============================================================================================================
         loadTimeOff();
         //==============================================================================================================
-        isDataValid(module.cmd(InterfaceVersions.CMD_DATA));
+        loadSpeedModule();
+        //==============================================================================================================
+        isDataValid(Commands.CMD_DATA.getParam());
 
         weightMargin = (int) (weightMax * 1.2);
     }
@@ -23,7 +25,7 @@ class V1 extends Versions {
     @Override
     protected synchronized int updateWeight() {
         try {
-            sensorTenzo = Integer.valueOf(module.cmd(InterfaceVersions.CMD_SENSOR));
+            sensorTenzo = Integer.valueOf(Commands.CMD_SENSOR.getParam());
             return weight = (int) (coefficientA * sensorTenzo + coefficientB);
         } catch (Exception e) {
             return sensorTenzo = weight = Integer.MIN_VALUE;
@@ -38,7 +40,7 @@ class V1 extends Versions {
     @Override
     protected synchronized boolean setOffsetScale() { //обнуление
         try {
-            coefficientB = -coefficientA * Integer.parseInt(module.cmd(InterfaceVersions.CMD_SENSOR));
+            coefficientB = -coefficientA * Integer.parseInt(Commands.CMD_SENSOR.getParam());
         } catch (Exception e) {
             return false;
         }
@@ -47,7 +49,7 @@ class V1 extends Versions {
 
     @Override
     protected boolean writeData() {
-        return module.cmd(InterfaceVersions.CMD_DATA + 'S' + coefficientA + ' ' + coefficientB + ' ' + weightMax).equals(InterfaceVersions.CMD_DATA);
+        return Commands.CMD_DATA.setParam("S" + coefficientA + ' ' + coefficientB + ' ' + weightMax);
     }
 
     @Override
@@ -82,7 +84,7 @@ class V1 extends Versions {
 
     @Override
     protected boolean setScaleNull() {
-        String str = module.cmd(InterfaceVersions.CMD_SENSOR);
+        String str = Commands.CMD_SENSOR.getParam();
         if (str.isEmpty()) {
             return false;
         }

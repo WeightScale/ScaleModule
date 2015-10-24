@@ -7,22 +7,20 @@ import java.io.IOException;
  */
 public class BootModule extends Module {
     public RunnableBootConnect runnableBootConnect;
-    String version = "";
+    String versionName = "";
 
-    /**
-     * Конструктор модуля бутлодера.
-     *
+    /** Конструктор модуля бутлодера.
      * @param version Верситя бутлодера.
      */
     public BootModule(String version, OnEventConnectResult event)throws Exception{
         super(event);
         runnableBootConnect = new RunnableBootConnect();
-        this.version = version;
+        versionName = version;
 
     }
 
     @Override
-    public void attach() /*throws Throwable*/ {
+    public void attach(){
         onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
         new Thread(runnableBootConnect).start();
     }
@@ -32,20 +30,26 @@ public class BootModule extends Module {
      * Вызывать этот метод при закрытии программы.
      */
     @Override
-    public void dettach() {
+    public void dettach(){
         removeCallbacksAndMessages(null);
         disconnect();
     }
 
     /** Обработчик для процесса соединения
      */
-    class RunnableBootConnect implements Runnable{
+    private class RunnableBootConnect implements Runnable{
 
         @Override
         public void run() {
             try {
                 connect();
-                onEventConnectResult.handleResultConnect(ResultConnect.STATUS_LOAD_OK);
+                if(isBootloader()){
+                    onEventConnectResult.handleResultConnect(ResultConnect.STATUS_LOAD_OK);
+                }else {
+                    disconnect();
+                    onEventConnectResult.handleResultConnect(ResultConnect.STATUS_VERSION_UNKNOWN);
+                }
+
             } catch (IOException e) {
                 onEventConnectResult.handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
             }
@@ -55,29 +59,20 @@ public class BootModule extends Module {
 
     /**
      * Комманда старт программирования.
-     *
+     * Версия 2 и выше.
      * @return true - Запущено программирование.
      */
-    public boolean start() {
-        return "STR".equals(cmd("STR"));
+    public boolean startProgramming() {
+        return Commands.CMD_START_PROGRAM.getParam().equals(Commands.CMD_START_PROGRAM.getName());
     }
 
     /**
-     * Получить код микросхемы.
-     *
+     * Получить код микроконтролера.
+     * Версия 2 и выше.
      * @return Код в текстовом виде.
      */
     public String getPartCode() {
-        return cmd("PRC");
-    }
-
-    /**
-     * Получить версию железа.
-     *
-     * @return Версия в текстовом виде.
-     */
-    public String getHardware() {
-        return cmd("HRW");
+        return Commands.CMD_PART_CODE.getParam();
     }
 
     /**
@@ -86,15 +81,26 @@ public class BootModule extends Module {
      * @return Номер версии.
      */
     public int getBootVersion() {
-        String vrs = cmd(InterfaceVersions.CMD_VERSION);
-        if (vrs.startsWith(version)) {
+        String vrs = getModuleVersion();
+        if (vrs.startsWith(versionName)) {
             try {
-                return Integer.valueOf(vrs.replace(version, ""));
+                return Integer.valueOf(vrs.replace(versionName, ""));
             } catch (Exception e) {
                 return 0;
             }
         }
         return 0;
+    }
+
+    /**
+     * Определяем имя после соединения это бутлоадер модуль.
+     * Указывается имя при инициализации класса com.kostya.module.BootModule.
+     *
+     * @return true Имя совпадает.
+     */
+    public boolean isBootloader() {
+        String vrs = getModuleVersion(); //Получаем версию весов
+        return vrs.startsWith(versionName);
     }
 
 }

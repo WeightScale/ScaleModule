@@ -21,19 +21,21 @@ class V4 extends Versions {
         //======================================================================
         loadTimeOff();
         //======================================================================
+        loadSpeedModule();
+        //======================================================================
         try {
             offset = Integer.valueOf(module.getModuleOffsetSensor());
         } catch (Exception e) {
             throw new ErrorModuleException("Сделать обнуление в настройках");
         }
         //======================================================================
-        spreadsheet = module.cmd(InterfaceVersions.CMD_SPREADSHEET);
-        username = module.cmd(InterfaceVersions.CMD_G_USER);
-        password = module.cmd(InterfaceVersions.CMD_G_PASS);
-        phone = module.cmd(InterfaceVersions.CMD_PHONE);
+        spreadsheet = Commands.CMD_SPREADSHEET.getParam();
+        username = Commands.CMD_G_USER.getParam();
+        password = Commands.CMD_G_PASS.getParam();
+        phone = Commands.CMD_PHONE.getParam();
         //======================================================================
 
-        isDataValid(module.cmd(InterfaceVersions.CMD_DATA));
+        isDataValid(Commands.CMD_DATA.getParam());
 
         weightMargin = (int) (weightMax * 1.2);
         marginTenzo = (int) ((weightMax / coefficientA) * 1.2);
@@ -46,7 +48,7 @@ class V4 extends Versions {
     @Override
     protected synchronized int updateWeight() {
         try {
-            sensorTenzoOffset = Integer.valueOf(module.cmd(InterfaceVersions.CMD_SENSOR_OFFSET));
+            sensorTenzoOffset = Integer.valueOf(Commands.CMD_SENSOR_OFFSET.getParam());
             return weight = (int) (coefficientA * sensorTenzoOffset);
         } catch (Exception e) {
             return sensorTenzoOffset = weight = Integer.MIN_VALUE;
@@ -66,19 +68,19 @@ class V4 extends Versions {
      */
     @Override
     protected synchronized boolean setOffsetScale() { //обнуление
-        return module.cmd(InterfaceVersions.CMD_SET_OFFSET).equals(InterfaceVersions.CMD_SET_OFFSET);
+        return Commands.CMD_SET_OFFSET.getParam().equals(Commands.CMD_SET_OFFSET.getName());
     }
 
     /**Записать данные параметров в модуль.
      * @return true - Данные записаны.
-     * @see InterfaceVersions#CMD_DATA
+     * @see Commands#CMD_DATA
      */
     @Override
     protected boolean writeData() {
-        return module.cmd(InterfaceVersions.CMD_DATA +
+        return Commands.CMD_DATA.setParam(
                 InterfaceVersions.CMD_DATA_CFA + '=' + coefficientA + ' ' +
-                InterfaceVersions.CMD_DATA_WGM + '=' + weightMax + ' ' +
-                InterfaceVersions.CMD_DATA_LMT + '=' + limitTenzo).equals(InterfaceVersions.CMD_DATA);
+                        InterfaceVersions.CMD_DATA_WGM + '=' + weightMax + ' ' +
+                        InterfaceVersions.CMD_DATA_LMT + '=' + limitTenzo);
     }
 
     /**Получить показания сенсора с учетом обнуления.
@@ -109,7 +111,7 @@ class V4 extends Versions {
      * @param d Данные
      * @throws Exception Данные не правельные.
      * @see V4#load()
-     * @see InterfaceVersions#CMD_DATA
+     * @see Commands#CMD_DATA
      */
     protected void isDataValid(String d) throws Exception {
         String[] parts = d.split(" ", 0);
@@ -142,22 +144,22 @@ class V4 extends Versions {
 
     @Override
     protected boolean setSpreadsheet(String sheet) {
-        return module.cmd(InterfaceVersions.CMD_SPREADSHEET + sheet).equals(InterfaceVersions.CMD_SPREADSHEET);
+        return Commands.CMD_SPREADSHEET.setParam(sheet);
     }
 
     @Override
     protected boolean setUsername(String username) {
-        return module.cmd(InterfaceVersions.CMD_G_USER + username).equals(InterfaceVersions.CMD_G_USER);
+        return Commands.CMD_G_USER.setParam(username);
     }
 
     @Override
     protected boolean setPassword(String password) {
-        return module.cmd(InterfaceVersions.CMD_G_PASS + password).equals(InterfaceVersions.CMD_G_PASS);
+        return Commands.CMD_G_PASS.setParam(password);
     }
 
     @Override
     protected boolean setPhone(String phone) {
-        return module.cmd(InterfaceVersions.CMD_PHONE + phone).equals(InterfaceVersions.CMD_PHONE);
+        return Commands.CMD_PHONE.setParam(phone);
     }
 
 }

@@ -2,8 +2,6 @@ package com.konst.module; /**
  * Copyright (c) 2015.
  */
 
-import android.bluetooth.BluetoothDevice;
-
 import java.io.*;
 import java.util.concurrent.TimeUnit;
 
@@ -30,8 +28,9 @@ public class ScaleModule extends Module {
      */
     protected int timerNull;
     private int numVersion;
-    private String versionName;
-    OnEventResultMeasuring onEventResultMeasuring;
+    private final String versionName;
+    public OnEventResultWeight onEventResultWeight;
+    public OnEventResultBatteryTemperature onEventResultBatteryTemperature;
     RunnableScaleConnect runnableScaleConnect;
 
     /**
@@ -56,6 +55,20 @@ public class ScaleModule extends Module {
         WEIGHT_MARGIN
     }
 
+    /**
+     * Интерфейс события результат вес.
+     */
+    public interface OnEventResultWeight{
+        int weight(ResultWeight what, int weight, int sensor);
+    }
+
+    /**
+     * Интерфейс события результат батарея и температура.
+     */
+    public interface OnEventResultBatteryTemperature{
+        int batteryTemperature(int battery, int temperature);
+    }
+
     public ScaleModule(String moduleVersion) throws Exception {
         runnableScaleConnect = new RunnableScaleConnect();
         versionName = moduleVersion;
@@ -67,24 +80,42 @@ public class ScaleModule extends Module {
         versionName = moduleVersion;
     }
 
-    HandlerWeight handlerWeight = new HandlerWeight() {
+    /**
+     * Соединится с модулем.
+     */
+    @Override
+    public void attach() {
+        onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
+        new Thread(runnableScaleConnect).start();
+    }
+
+    /**
+     * Отсоединение весового модуля.
+     * Необходимо использовать перед закрытием программы чтобы остановить работающие процессы
+     */
+    @Override
+    public void dettach() {
+        removeCallbacksAndMessages(null);
+        stopMeasuringWeight(true);
+        stopMeasuringBatteryTemperature(true);
+        disconnect();
+        version = null;
+    }
+
+    final MeasuringWeight measuringWeight = new MeasuringWeight() {
         @Override
         public int onEvent(ResultWeight what, int weight, int sensor) {
-            return resultMeasuring.resultWeight(what,weight,sensor);
+            return resultMeasuring.weight(what,weight,sensor);
         }
     };
 
-    HandlerBatteryTemperature handlerBatteryTemperature = new HandlerBatteryTemperature() {
+    final MeasuringBatteryTemperature measuringBatteryTemperature = new MeasuringBatteryTemperature() {
         @Override
         public int onEvent(int battery, int temperature) {
-            return 5;
+            return resultMeasuring.batteryTemperature(battery, temperature);
         }
     };
 
-    public interface OnEventResultMeasuring{
-        int resultWeight(ResultWeight what, int weight, int sensor);
-        int resultBatteryTemperature(int battery, int temperature);
-    }
 
     /**
      * Получаем класс загруженой версии весового модуля
@@ -150,17 +181,6 @@ public class ScaleModule extends Module {
     }
 
     /**
-     * Отсоединение весового модуля.
-     * Необходимо использовать перед закрытием программы чтобы остановить работающие процессы
-     */
-    @Override
-    public void dettach() {
-        removeCallbacksAndMessages(null);
-        disconnect();
-        version = null;
-    }
-
-    /**
      * Прверяем если весовой модуль присоеденен.
      *
      * @return true если было присоединение и загрузка версии весового модуля
@@ -176,7 +196,7 @@ public class ScaleModule extends Module {
      * @return true версия правильная
      */
     public boolean isScales() {
-        String vrs = cmd(InterfaceVersions.CMD_VERSION); //Получаем версию весов
+        String vrs = getModuleVersion(); //Получаем версию весов
         if (vrs.startsWith(versionName)) {
             try {
                 numVersion = Integer.valueOf(vrs.replace(versionName, ""));
@@ -187,15 +207,6 @@ public class ScaleModule extends Module {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Соединится с модулем.
-     */
-    @Override
-    public void attach() {
-        onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
-        new Thread(runnableScaleConnect).start();
     }
 
     /** Определяем версию весов.
@@ -221,20 +232,21 @@ public class ScaleModule extends Module {
      *
      * @param cod Код
      * @return true Значение установлено
-     * @see InterfaceVersions#CMD_SERVICE_COD
+     * @see Commands#CMD_SERVICE_COD
      */
     public boolean setModuleServiceCod(String cod) {
-        return cmd(InterfaceVersions.CMD_SERVICE_COD + cod).equals(InterfaceVersions.CMD_SERVICE_COD);
+        return Commands.CMD_SERVICE_COD.setParam(cod);
     }
 
     /**
      * Получаем сервис код.
      *
      * @return код
-     * @see InterfaceVersions#CMD_SERVICE_COD
+     * @see Commands#CMD_SERVICE_COD
      */
     public String getModuleServiceCod() {
-        return cmd(InterfaceVersions.CMD_SERVICE_COD);
+        return Commands.CMD_SERVICE_COD.getParam();
+        //return cmd(InterfaceVersions.CMD_SERVICE_COD);
     }
 
     /**
@@ -242,20 +254,21 @@ public class ScaleModule extends Module {
      *
      * @param filterADC Значение АЦП от 1 до 15
      * @return true Значение установлено
-     * @see InterfaceVersions#CMD_FILTER
+     * @see Commands#CMD_FILTER
      */
     public boolean setModuleFilterADC(int filterADC) {
-        return cmd(InterfaceVersions.CMD_FILTER + filterADC).equals(InterfaceVersions.CMD_FILTER);
+        return Commands.CMD_FILTER.setParam(filterADC);
+        //return cmd(InterfaceVersions.CMD_FILTER + filterADC).equals(InterfaceVersions.CMD_FILTER);
     }
 
     /**
      * Получаем из весового модуля время выключения при бездействии устройства
      *
      * @return время в минутах
-     * @see InterfaceVersions#CMD_TIMER
+     * @see Commands#CMD_TIMER
      */
     public String getModuleTimeOff() {
-        return cmd(InterfaceVersions.CMD_TIMER);
+        return Commands.CMD_TIMER.getParam();
     }
 
     /**
@@ -263,10 +276,10 @@ public class ScaleModule extends Module {
      *
      * @param timeOff Время в минутах
      * @return true Значение установлено
-     * @see InterfaceVersions#CMD_TIMER
+     * @see Commands#CMD_TIMER
      */
     public boolean setModuleTimeOff(int timeOff) {
-        return cmd(InterfaceVersions.CMD_TIMER + timeOff).equals(InterfaceVersions.CMD_TIMER);
+        return Commands.CMD_TIMER.setParam(timeOff);
     }
 
     /**
@@ -279,10 +292,10 @@ public class ScaleModule extends Module {
      * 5 - 115200bps.
      *
      * @return Значение от 1 до 5.
-     * @see InterfaceVersions#CMD_SPEED
+     * @see Commands#CMD_SPEED
      */
     public String getModuleSpeedPort() {
-        return cmd(InterfaceVersions.CMD_SPEED);
+        return Commands.CMD_SPEED.getParam();
     }
 
     /**
@@ -296,41 +309,41 @@ public class ScaleModule extends Module {
      *
      * @param speed Значение скорости.
      * @return true - Значение записано.
-     * @see InterfaceVersions#CMD_SPEED
+     * @see Commands#CMD_SPEED
      */
     public boolean setModuleSpeedPort(int speed) {
-        return cmd(InterfaceVersions.CMD_SPEED + speed).equals(InterfaceVersions.CMD_SPEED);
+        return Commands.CMD_SPEED.setParam(speed);
     }
 
     /**
      * Получить офсет датчика веса.
      *
      * @return Значение офсет.
-     * @see InterfaceVersions#CMD_GET_OFFSET
+     * @see Commands#CMD_GET_OFFSET
      */
     public String getModuleOffsetSensor() {
-        return cmd(InterfaceVersions.CMD_GET_OFFSET);
+        return Commands.CMD_GET_OFFSET.getParam();
     }
 
     /**
      * Получить значение датчика веса.
      *
      * @return Значение датчика.
-     * @see InterfaceVersions#CMD_SENSOR
+     * @see Commands#CMD_SENSOR
      */
     public String feelWeightSensor() {
-        return cmd(InterfaceVersions.CMD_SENSOR);
+        return Commands.CMD_SENSOR.getParam();
     }
 
     /**
      * Получаем значение заряда батерии.
      *
      * @return Заряд батареи в процентах.
-     * @see InterfaceVersions#CMD_BATTERY
+     * @see Commands#CMD_BATTERY
      */
     public int getModuleBatteryCharge() {
         try {
-            battery = Integer.valueOf(cmd(InterfaceVersions.CMD_BATTERY));
+            battery = Integer.valueOf(Commands.CMD_BATTERY.getParam());
         } catch (Exception e) {
             battery = -0;
         }
@@ -343,34 +356,24 @@ public class ScaleModule extends Module {
      *
      * @param charge Заряд батереи в процентах.
      * @return true - Заряд установлен.
-     * @see InterfaceVersions#CMD_CALL_BATTERY
+     * @see Commands#CMD_CALL_BATTERY
      */
     public boolean setModuleBatteryCharge(int charge) {
-        return cmd(InterfaceVersions.CMD_CALL_BATTERY + charge).equals(InterfaceVersions.CMD_CALL_BATTERY);
+        return Commands.CMD_CALL_BATTERY.setParam(charge);
     }
 
     /**
      * Получаем значение температуры весового модуля.
      *
      * @return Температура в градусах.
-     * @see InterfaceVersions#CMD_DATA_TEMP
+     * @see Commands#CMD_DATA_TEMP
      */
     public int getModuleTemperature() {
         try {
-            return (int) ((float) ((Integer.valueOf(cmd(InterfaceVersions.CMD_DATA_TEMP)) - 0x800000) / 7169) / 0.81) - 273;
+            return (int) ((float) ((Integer.valueOf(Commands.CMD_DATA_TEMP.getParam()) - 0x800000) / 7169) / 0.81) - 273;
         } catch (Exception e) {
             return -273;
         }
-    }
-
-    /**
-     * Получаем версию hardware весового модуля.
-     *
-     * @return Hardware версия весового модуля.
-     * @see InterfaceVersions#CMD_HARDWARE
-     */
-    public String getModuleHardware() {
-        return cmd(InterfaceVersions.CMD_HARDWARE);
     }
 
     /**
@@ -378,10 +381,10 @@ public class ScaleModule extends Module {
      *
      * @param name Имя весового модуля.
      * @return true - Имя записано в модуль.
-     * @see InterfaceVersions#CMD_NAME
+     * @see Commands#CMD_NAME
      */
     public boolean setModuleName(String name) {
-        return cmd(InterfaceVersions.CMD_NAME + name).equals(InterfaceVersions.CMD_NAME);
+        return Commands.CMD_NAME.setParam(name);
     }
 
     /**
@@ -389,10 +392,10 @@ public class ScaleModule extends Module {
      *
      * @param percent Значение калибровки в процентах.
      * @return true - Калибровка прошла успешно.
-     * @see InterfaceVersions#CMD_CALL_BATTERY
+     * @see Commands#CMD_CALL_BATTERY
      */
     public boolean setModuleCalibrateBattery(int percent) {
-        return cmd(InterfaceVersions.CMD_CALL_BATTERY + percent).equals(InterfaceVersions.CMD_CALL_BATTERY);
+        return Commands.CMD_CALL_BATTERY.setParam(percent);
     }
 
     /**
@@ -564,8 +567,8 @@ public class ScaleModule extends Module {
         numVersion = version;
     }
 
-    public String getNameBluetoothDevice() {
-        return getDevice().getName();
+    public int getSpeedPort() {
+        return version.getSpeedPort();
     }
 
     public String getAddressBluetoothDevice() {
@@ -605,27 +608,35 @@ public class ScaleModule extends Module {
     }
 
     public void startMeasuringWeight(){
-        handlerWeight.start();
+        measuringWeight.start();
     }
     public void stopMeasuringWeight(boolean flag){
-        handlerWeight.stop(flag);
+        measuringWeight.stop(flag);
     }
 
     public void startMeasuringBatteryTemperature(){
-        handlerBatteryTemperature.start();
+        measuringBatteryTemperature.start();
     }
     public void stopMeasuringBatteryTemperature(boolean flag){
-        handlerBatteryTemperature.stop(flag);
+        measuringBatteryTemperature.stop(flag);
     }
 
-    public void setOnEventResultMeasuring(OnEventResultMeasuring onEventResultMeasuring) {
-        //this.onEventResultMeasuring = onEventResultMeasuring;
-        handlerWeight.setResultMeasuring(onEventResultMeasuring);
-        //handlerBatteryTemperature.setResultMeasuring(onEventResultMeasuring);
+    public void setOnEventResultWeight(OnEventResultWeight onEventResultWeight) {
+        measuringWeight.setResultMeasuring(onEventResultWeight);
     }
+
+    public void setOnEventResultBatteryTemperature(OnEventResultBatteryTemperature onEventResultBatteryTemperature) {
+        measuringBatteryTemperature.setResultMeasuring(onEventResultBatteryTemperature);
+    }
+
+    /*public void setOnEventResultMeasuring(OnEventResultMeasuring onEventResultMeasuring) {
+        //this.onEventResultMeasuring = onEventResultMeasuring;
+        measuringWeight.setResultMeasuring(onEventResultMeasuring);
+        measuringBatteryTemperature.setResultMeasuring(onEventResultMeasuring);
+    }*/
 
     public void resetAutoNull(){
-        handlerBatteryTemperature.resetAutoNull();
+        measuringBatteryTemperature.resetAutoNull();
     }
 
     class RunnableScaleConnect implements Runnable{
@@ -647,7 +658,7 @@ public class ScaleModule extends Module {
                     }
                 } else {
                     disconnect();
-                    onEventConnectResult.handleResultConnect(ResultConnect.STATUS_SCALE_UNKNOWN);
+                    onEventConnectResult.handleResultConnect(ResultConnect.STATUS_VERSION_UNKNOWN);
                 }
             } catch (IOException e) {
                 onEventConnectResult.handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
@@ -660,9 +671,9 @@ public class ScaleModule extends Module {
      * Класс для обработки показаний батареи и температуры надо использевать после
      * создания класса com.kostya.module.ScaleModule и инициализации метода init().
      */
-    public abstract class HandlerBatteryTemperature {
-        RunnableBatteryTemperature runnableBatteryTemperature;
-        //OnEventResultMeasuring resultMeasuring;
+    public abstract class MeasuringBatteryTemperature {
+        final RunnableBatteryTemperature runnableBatteryTemperature;
+        OnEventResultBatteryTemperature resultMeasuring;
 
         /** Метод посылает значения веса и датчика.
          //* @param battery     результат заряд батареи в процентах.
@@ -671,13 +682,13 @@ public class ScaleModule extends Module {
          */
         public abstract int onEvent(int battery, int temperature);
 
-        public HandlerBatteryTemperature(){
+        protected MeasuringBatteryTemperature(){
             runnableBatteryTemperature = new RunnableBatteryTemperature();
         }
 
-        /*public void setResultMeasuring(OnEventResultMeasuring resultMeasuring) {
+        public void setResultMeasuring(OnEventResultBatteryTemperature resultMeasuring) {
             this.resultMeasuring = resultMeasuring;
-        }*/
+        }
 
         /** Метод запускает или останавливает процесс измерения.
          * @param process true запускаем процесс false останавливаем.
@@ -763,16 +774,16 @@ public class ScaleModule extends Module {
      * Надо использевать после создания класса com.kostya.module.ScaleModule
      * и инициализации метода init().
      */
-    public abstract class HandlerWeight {
-        RunnableWeight runnableWeight;
-        OnEventResultMeasuring resultMeasuring;
+    public abstract class MeasuringWeight {
+        final RunnableWeight runnableWeight;
+        OnEventResultWeight resultMeasuring;
 
-        public HandlerWeight(){
+        protected MeasuringWeight(){
             runnableWeight = new RunnableWeight();
             //resultMeasuring = onEventResultMeasuring;
         }
 
-        public void setResultMeasuring(OnEventResultMeasuring resultMeasuring) {
+        public void setResultMeasuring(OnEventResultWeight resultMeasuring) {
             this.resultMeasuring = resultMeasuring;
         }
 
