@@ -119,25 +119,24 @@ class V4 extends Versions {
         Iterator<String> iteratorData = data.getKeyIterator();
         synchronized (this) {
             while (iteratorData.hasNext()) {
-                switch (iteratorData.next()) {
-                    case InterfaceVersions.CMD_DATA_CFA:
+                String dat = iteratorData.next();
+                //switch (iteratorData.next()) {
+                    if (InterfaceVersions.CMD_DATA_CFA.equals(dat)) {//case InterfaceVersions.CMD_DATA_CFA:
                         coefficientA = Float.valueOf(data.getValue(InterfaceVersions.CMD_DATA_CFA));//получаем коэфициент
                         if (coefficientA == 0.0f)
                             throw new ErrorModuleException("Коэффициент А=" + coefficientA);
-                        break;
-                    case InterfaceVersions.CMD_DATA_CFB:
+                    }//break;
+                    else if (InterfaceVersions.CMD_DATA_CFB.equals(dat)) {//case InterfaceVersions.CMD_DATA_CFB:
                         coefficientB = Float.valueOf(data.getValue(InterfaceVersions.CMD_DATA_CFB));//получить offset
-                        break;
-                    case InterfaceVersions.CMD_DATA_WGM:
+                    }// break;
+                    else if (InterfaceVersions.CMD_DATA_WGM.equals(dat)) {//case InterfaceVersions.CMD_DATA_WGM:
                         weightMax = Integer.parseInt(data.getValue(InterfaceVersions.CMD_DATA_WGM));//получаем макимальнай вес
                         if (weightMax <= 0)
                             throw new ErrorModuleException("Предельный вес =" + weightMax);
-                        break;
-                    case InterfaceVersions.CMD_DATA_LMT:
+                    }//break;
+                    else if (InterfaceVersions.CMD_DATA_LMT.equals(dat)) {//case InterfaceVersions.CMD_DATA_LMT:
                         limitTenzo = Integer.parseInt(data.getValue(InterfaceVersions.CMD_DATA_LMT));//получаем макимальнай показание перегруза
-                        break;
-                    default:
-                }
+                    }//break;
             }
         }
     }

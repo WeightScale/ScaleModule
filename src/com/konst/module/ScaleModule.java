@@ -86,7 +86,8 @@ public class ScaleModule extends Module {
     @Override
     public void attach() {
         onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
-        new Thread(runnableScaleConnect).start();
+        //new Thread(runnableScaleConnect).start();
+        new ConnectClientThread(getDevice()).start();
     }
 
     /**
@@ -95,7 +96,7 @@ public class ScaleModule extends Module {
      */
     @Override
     public void dettach() {
-        removeCallbacksAndMessages(null);
+        //removeCallbacksAndMessages(null);todo проверка без handel
         stopMeasuringWeight(true);
         stopMeasuringBatteryTemperature(true);
         disconnect();

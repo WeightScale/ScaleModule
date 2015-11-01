@@ -3,11 +3,17 @@ package com.konst.module;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.os.Build;
 import android.os.Handler;
+import android.os.ParcelUuid;
+import android.text.TextUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -16,7 +22,8 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Kostya
  */
-public abstract class Module extends Handler implements InterfaceVersions {
+public abstract class Module extends Thread implements InterfaceVersions {
+    Module module;
     /**
      * Bluetooth устройство модуля весов.
      */
@@ -25,10 +32,12 @@ public abstract class Module extends Handler implements InterfaceVersions {
      * Bluetooth адаптер терминала.
      */
     private final BluetoothAdapter bluetoothAdapter;
+    UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private BluetoothSocket socket;
-    private OutputStream os;
+    private OutputStreamWriter mmOutputStreamWriter;
     private InputStream is;
     OnEventConnectResult onEventConnectResult;
+    volatile StringBuilder response = new StringBuilder();
     /**
      * Константа время задержки для получения байта.
      */
@@ -97,6 +106,7 @@ public abstract class Module extends Handler implements InterfaceVersions {
         if(flagTimeout)
             throw new Exception("Timeout enabled bluetooth");
         Commands.setInterfaceCommand(this);
+        module = this;
     }
 
     protected Module(OnEventConnectResult event) throws Exception{
@@ -117,6 +127,7 @@ public abstract class Module extends Handler implements InterfaceVersions {
             throw new Exception("Timeout enabled bluetooth");
         onEventConnectResult = event;
         Commands.setInterfaceCommand(this);
+        module = this;
     }
 
     public void setOnEventConnectResult(OnEventConnectResult onEventConnectResult) {
@@ -157,54 +168,101 @@ public abstract class Module extends Handler implements InterfaceVersions {
     @Override
     public synchronized String cmd(Commands cmd) {
         try {
-            int t = is.available();
-            if (t > 0) {
-                is.read(new byte[t]);
-            }
 
             sendCommand(cmd.toString());
-            StringBuilder response = new StringBuilder();
-
-            for (int i = 0; i < cmd.getTimeOut() && response.length() < 129; ++i) {
-                Thread.sleep(1L);
-                if (is.available() > 0) {
-                    i = 0;
-                    char ch = (char) is.read();
-                    if (ch == '\uffff') {
-                        connect();
-                        break;
-                    }
-                    if (ch == '\r')
-                        continue;
-                    if (ch == '\n')
-                        if (response.toString().startsWith(cmd.getName()))
-                            return response.replace(0, 3, "").toString().isEmpty() ? cmd.getName() : response.toString();
-                        else
-                            return "";
-
-                    response.append(ch);
-                }
-            }
 
         } catch (Exception ioe) {
             try {
-                connect();
-            } catch (IOException | NullPointerException e) {
+                //connect();
+            } catch (Exception e) {
                 try { TimeUnit.SECONDS.sleep(1); } catch (InterruptedException e1) { }
             }
         }
         return "";
     }
 
+    @Override
+    public String command(Commands cmd) {
+        return null;
+    }
+
+
+    /**
+     * Послать команду к модулю и получить ответ
+     *
+     * @param cmd Команда в текстовом виде. Формат [команда][параметр] параметр может быть пустым.
+     *            Если есть парамет то обрабатывается параметр, иначе команда возвращяет параметр.
+     * @return Имя команды или параметр. Если вернулась имя команды то посланый параметр обработан удачно.
+     * Если вернулась пустая строка то команда не выполнена.
+     * @see InterfaceVersions
+     */
+    /*@Override
+    public synchronized String cmd(final Commands cmd) {
+        final StringBuilder response = new StringBuilder();
+
+        try {
+            os = socket.getOutputStream();
+            is = socket.getInputStream();
+            sendCommand(cmd.toString());
+
+            final Thread readThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    byte[] bytes = new byte[1024];
+                    int numRead = 0;
+                    try {
+                        while ((numRead = is.read(bytes)) >= 0) {
+                            response.append(new String(bytes, 0, numRead));
+                        }
+                    }catch (IOException e){
+                        e.printStackTrace();
+                    }catch (StringIndexOutOfBoundsException e){
+                        e.printStackTrace();
+                    }
+
+                }
+            });
+
+            synchronized (readThread){
+                readThread.start();
+                for (int i = 0; i < 10000; ++i) {
+                    readThread.wait(1);
+                    if(response.toString().indexOf('\n')!=-1){
+                        break;
+                    }
+                }
+                if(readThread.isAlive()) {
+                    os.close();
+                    is.close();
+                    readThread.interrupt();
+                }
+            }
+            return response.replace(0, 3, "").toString().isEmpty() ? cmd.getName() : response.toString();
+        } catch (Exception ioe) {
+            try {
+                connect();
+            } catch (Exception e) {
+                try { TimeUnit.SECONDS.sleep(1); } catch (InterruptedException e1) { }
+            }
+        }
+        return "";
+    }*/
+
+
     /** Отправить команду.
      * @param cmd Команда.
      * @throws IOException
      */
     private synchronized void sendCommand(String cmd) throws IOException {
-        os.write(cmd.getBytes());
+
+        mmOutputStreamWriter.write(cmd);
+        mmOutputStreamWriter.write("\r");
+        mmOutputStreamWriter.write("\n");
+        mmOutputStreamWriter.flush();//что этот метод делает?
+        /*os.write(cmd.getBytes());
         os.write((byte) 0x0D);
         os.write((byte) 0x0A);
-        os.flush(); //что этот метод делает?
+        os.flush(); */
     }
 
     /**
@@ -219,8 +277,10 @@ public abstract class Module extends Handler implements InterfaceVersions {
             if (t > 0) {
                 is.read(new byte[t]);
             }
-            os.write(ch);
-            os.flush(); //что этот метод делает?
+            mmOutputStreamWriter.write(ch);
+            mmOutputStreamWriter.flush();
+            //os.write(ch);
+            //os.flush(); //что этот метод делает?
             return true;
         } catch (IOException ioe) {
         }
@@ -246,7 +306,7 @@ public abstract class Module extends Handler implements InterfaceVersions {
                 Thread.sleep(1);
             }
             return 0;
-        } catch (IOException | InterruptedException ioe) {
+        } catch (Exception ioe) {
         }
 
         try {
@@ -264,11 +324,31 @@ public abstract class Module extends Handler implements InterfaceVersions {
     protected synchronized void connect() throws IOException, NullPointerException {
         disconnect();
         // Get a BluetoothSocket for a connection with the given BluetoothDevice
-        socket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+        if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.HONEYCOMB)
+            if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
+                try {
+                    Method m = device.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
+                    socket = (BluetoothSocket) m.invoke(device, 1);
+                } catch (NoSuchMethodException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            else
+                socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+
+        else
+            socket = device.createRfcommSocketToServiceRecord(uuid);
+
+
+        //socket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
         bluetoothAdapter.cancelDiscovery();
         socket.connect();
         is = socket.getInputStream();
-        os = socket.getOutputStream();
+        //os = socket.getOutputStream();
+        mmOutputStreamWriter = new OutputStreamWriter(socket.getOutputStream());
     }
 
     /**
@@ -278,8 +358,10 @@ public abstract class Module extends Handler implements InterfaceVersions {
         try {
             if (is != null)
                 is.close();
-            if (os != null)
-                os.close();
+            if (mmOutputStreamWriter != null)
+                mmOutputStreamWriter.close();
+            /*if (os != null)
+                os.close();*/
             if (socket != null)
                 socket.close();
         } catch (IOException ioe) {
@@ -287,7 +369,8 @@ public abstract class Module extends Handler implements InterfaceVersions {
             //return;
         }
         is = null;
-        os = null;
+        //os = null;
+        mmOutputStreamWriter = null;
         socket = null;
     }
 
@@ -336,4 +419,87 @@ public abstract class Module extends Handler implements InterfaceVersions {
         return Commands.CMD_HARDWARE.getParam();
     }
 
+    protected class ConnectClientThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        //private final BluetoothDevice mmDevice;
+
+        public ConnectClientThread(BluetoothDevice device) {
+            BluetoothSocket tmp = null;
+            //mmDevice = device;
+
+            try {
+                tmp = device.createRfcommSocketToServiceRecord(uuid);
+            } catch (IOException e) { }
+            mmSocket = tmp;
+        }
+
+        public void run() {
+            bluetoothAdapter.cancelDiscovery();
+
+            try {
+                mmSocket.connect();
+            } catch (IOException connectException) {
+                try {
+                    mmSocket.close();
+                } catch (IOException closeException) { }
+                return;
+            }
+            socket = mmSocket;
+            // Do work to manage the connection (in a separate thread)
+            //manageConnectedSocket(mmSocket);
+            module.start();
+    }
+
+    /** Will cancel an in-progress connection, and close the socket */
+    public void cancel() {
+        try {
+            mmSocket.close();
+        } catch (IOException e) { }
+    }
+}
+
+    @Override
+    public synchronized void start() {
+        InputStream tmpIn = null;
+        OutputStreamWriter tmpOut = null;
+
+        try {
+            tmpIn = socket.getInputStream();
+            tmpOut = new OutputStreamWriter(socket.getOutputStream());
+        } catch (IOException e) { }
+
+        is = tmpIn;
+        mmOutputStreamWriter = tmpOut;
+        super.start();
+    }
+
+    @Override
+    public void run() {
+        byte[] bytes = new byte[1024];
+        int numRead = 0;
+
+        while (true) {
+            try {
+                while ((numRead = is.read(bytes)) >= 0) {
+                    response.append(new String(bytes, 0, numRead));
+                }
+            } catch (IOException e) {
+                break;
+            }
+        }
+    }
+
+    /* Вызываем для передачи данных */
+    protected void write(String bytes) {
+        try {
+            mmOutputStreamWriter.write(bytes);
+        } catch (IOException e) { }
+    }
+
+    /* Вызываем для завершения соединения */
+    protected void cancel() {
+        try {
+            socket.close();
+        } catch (IOException e) { }
+    }
 }

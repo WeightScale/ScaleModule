@@ -60,4 +60,6 @@ public interface InterfaceVersions {
 
     String cmd(Commands cmd);
 
+    String command(Commands cmd);
+
 }

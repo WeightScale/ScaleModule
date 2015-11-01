@@ -222,7 +222,7 @@ abstract class Versions  {
         private final Map<String, String> argMap;
 
         public SimpleCommandLineParser(String[] arg, String predict) {
-            argMap = new HashMap<>();
+            argMap = new HashMap<String, String>();
             for (String anArg : arg) {
                 String[] str = anArg.split(predict, 2);
                 if (str.length > 1) {

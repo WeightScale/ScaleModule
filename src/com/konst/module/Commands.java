@@ -9,7 +9,7 @@ public enum Commands {
     /** Получить код микроконтроллера. */
     CMD_PART_CODE("PRC", 200),
     /** получить версию весов. */
-    CMD_VERSION("VRS", 200),
+    CMD_VERSION("VRS", 2000),
     /** получить/установить АЦП-фильтр. */
     CMD_FILTER("FAD", 200),
     /** получить/установить таймер выключения весов. */
@@ -68,17 +68,20 @@ public enum Commands {
     public String getName(){return name;}
     public String getParam(){
         cmd = name;
-        return interfaceVersions.cmd(this);
+        //return interfaceVersions.cmd(this);
+        return interfaceVersions.command(this);
     }
 
     public boolean setParam(String param){
         cmd = name + param;
-        return interfaceVersions.cmd(this).equals(this.name);
+        //return interfaceVersions.cmd(this).equals(this.name);
+        return interfaceVersions.command(this).equals(this.name);
     }
 
     public boolean setParam(int param){
         cmd = name + param;
-        return interfaceVersions.cmd(this).equals(this.name);
+        //return interfaceVersions.cmd(this).equals(this.name);
+        return interfaceVersions.command(this).equals(this.name);
     }
 
     public static void setInterfaceCommand(InterfaceVersions i){

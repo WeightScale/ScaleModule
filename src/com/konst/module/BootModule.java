@@ -31,7 +31,7 @@ public class BootModule extends Module {
      */
     @Override
     public void dettach(){
-        removeCallbacksAndMessages(null);
+        //removeCallbacksAndMessages(null);todo проверка без handel
         disconnect();
     }
 
