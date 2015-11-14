@@ -54,9 +54,6 @@ public enum Commands {
     private String cmd;
     static InterfaceVersions interfaceVersions;
 
-    /*public interface InterfaceCommand{
-        String cmd(Commands cmd);
-    }*/
     Commands(String n, int t){
         name = n;
         time = t;
@@ -68,19 +65,16 @@ public enum Commands {
     public String getName(){return name;}
     public String getParam(){
         cmd = name;
-        //return interfaceVersions.cmd(this);
         return interfaceVersions.command(this);
     }
 
     public boolean setParam(String param){
         cmd = name + param;
-        //return interfaceVersions.cmd(this).equals(this.name);
         return interfaceVersions.command(this).equals(this.name);
     }
 
     public boolean setParam(int param){
         cmd = name + param;
-        //return interfaceVersions.cmd(this).equals(this.name);
         return interfaceVersions.command(this).equals(this.name);
     }
 

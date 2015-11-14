@@ -31,7 +31,7 @@ public class ScaleModule extends Module {
     private final String versionName;
     public OnEventResultWeight onEventResultWeight;
     public OnEventResultBatteryTemperature onEventResultBatteryTemperature;
-    RunnableScaleConnect runnableScaleConnect;
+    RunnableScaleAttach runnableScaleAttach;
 
     /**
      * Константы результата взвешивания
@@ -70,13 +70,13 @@ public class ScaleModule extends Module {
     }
 
     public ScaleModule(String moduleVersion) throws Exception {
-        runnableScaleConnect = new RunnableScaleConnect();
+        runnableScaleAttach = new RunnableScaleAttach();
         versionName = moduleVersion;
     }
 
     public ScaleModule(String moduleVersion, OnEventConnectResult event) throws Exception {
         super(event);
-        runnableScaleConnect = new RunnableScaleConnect();
+        runnableScaleAttach = new RunnableScaleAttach();
         versionName = moduleVersion;
     }
 
@@ -84,10 +84,26 @@ public class ScaleModule extends Module {
      * Соединится с модулем.
      */
     @Override
-    public void attach() {
+    public void attach() /*throws InterruptedException*/ {
+        //final Throwable[] initException = {null};
         onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
         //new Thread(runnableScaleConnect).start();
-        new ConnectClientThread(getDevice()).start();
+        /*Thread t = new ConnectClientThread(getDevice());
+        t.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread thread, Throwable ex) {
+                initException[0] = ex;
+            }
+        });
+        t.start();
+        t.join();
+
+        if (initException[0] != null){
+            onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
+            throw new InterruptedException(initException[0].getMessage());
+        }*/
+
+        new Thread(runnableScaleAttach).start();
     }
 
     /**
@@ -103,6 +119,37 @@ public class ScaleModule extends Module {
         version = null;
     }
 
+    @Override
+    public synchronized void connect() throws IOException, NullPointerException {
+        disconnect();
+        // Get a BluetoothSocket for a connection with the given BluetoothDevice
+        if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.HONEYCOMB)
+            socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+        else
+            socket = device.createRfcommSocketToServiceRecord(uuid);
+        bluetoothAdapter.cancelDiscovery();
+        socket.connect();
+        bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+        bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
+    }
+
+    @Override
+    public void disconnect() {
+        try {
+            if(bufferedReader != null)
+                bufferedReader.close();
+            if(bufferedWriter != null)
+                bufferedWriter.close();
+            if (socket != null)
+                socket.close();
+        } catch (IOException ioe) {
+            socket = null;
+        }
+        bufferedReader =  null;
+        bufferedWriter = null;
+        socket = null;
+    }
+
     final MeasuringWeight measuringWeight = new MeasuringWeight() {
         @Override
         public int onEvent(ResultWeight what, int weight, int sensor) {
@@ -116,7 +163,6 @@ public class ScaleModule extends Module {
             return resultMeasuring.batteryTemperature(battery, temperature);
         }
     };
-
 
     /**
      * Получаем класс загруженой версии весового модуля
@@ -640,7 +686,7 @@ public class ScaleModule extends Module {
         measuringBatteryTemperature.resetAutoNull();
     }
 
-    class RunnableScaleConnect implements Runnable{
+    class RunnableScaleAttach implements Runnable{
 
         @Override
         public void run() {

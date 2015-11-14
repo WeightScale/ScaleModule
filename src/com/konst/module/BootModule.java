@@ -1,13 +1,22 @@
 package com.konst.module;
 
-import java.io.IOException;
 
-/** Класс для самопрограммирования весового модуля.
+import java.io.*;
+
+/**
+ * Класс для самопрограммирования весового модуля.
  * @author Kostya
  */
 public class BootModule extends Module {
+    private InputStream inputStream;
+    private InputStreamReader inputStreamReader;
+    private OutputStream outputStream;
     public RunnableBootConnect runnableBootConnect;
     String versionName = "";
+    /**
+     * Константа время задержки для получения байта.
+     */
+    private static final int TIMEOUT_GET_BYTE = 2000;
 
     /** Конструктор модуля бутлодера.
      * @param version Верситя бутлодера.
@@ -33,6 +42,99 @@ public class BootModule extends Module {
     public void dettach(){
         //removeCallbacksAndMessages(null);todo проверка без handel
         disconnect();
+    }
+
+    /**
+     * Получаем соединение с bluetooth весовым модулем.
+     * @throws IOException Ошибка соединения.
+     */
+    @Override
+    public synchronized void connect() throws IOException, NullPointerException {
+        disconnect();
+        // Get a BluetoothSocket for a connection with the given BluetoothDevice
+        if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.HONEYCOMB)
+            socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+        else
+            socket = device.createRfcommSocketToServiceRecord(uuid);
+        bluetoothAdapter.cancelDiscovery();
+        socket.connect();
+        inputStream = socket.getInputStream();
+        inputStreamReader = new InputStreamReader(inputStream);
+        bufferedReader = new BufferedReader(inputStreamReader);
+        outputStream = socket.getOutputStream();
+        bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+    }
+
+    /**
+     * Получаем разьединение с bluetooth весовым модулем
+     */
+    @Override
+    public void disconnect() {
+        try {
+            if(inputStreamReader != null)
+                inputStreamReader.close();
+            if(inputStream != null)
+                inputStream.close();
+            if (bufferedWriter != null)
+                bufferedWriter.close();
+            if (outputStream != null)
+                outputStream.close();
+            if (socket != null)
+                socket.close();
+        } catch (IOException ioe) {
+            socket = null;
+        }
+        inputStream = null;
+        inputStreamReader =  null;
+        outputStream = null;
+        bufferedWriter = null;
+        socket = null;
+    }
+
+    /**
+     * Послать байт.
+     *
+     * @param ch Байт для отсылки.
+     * @return true - байт отослан без ошибки.
+     */
+    public synchronized boolean sendByte(byte ch) {
+        try {
+            while (inputStreamReader.ready()){
+                inputStreamReader.read();
+            }
+            outputStream.write(ch);
+            outputStream.flush();
+            //os.write(ch);
+            //os.flush(); //что этот метод делает?
+            return true;
+        } catch (IOException ioe) {}
+        try {
+            connect();
+        } catch (IOException e) {}
+        return false;
+    }
+
+    /**
+     * Получить байт.
+     *
+     * @return Принятый байт.
+     */
+    public synchronized int getByte() {
+
+        try {
+            for (int i = 0; i < TIMEOUT_GET_BYTE; i++) {
+                if(inputStreamReader.ready()){
+                    return inputStream.read();
+                }
+                Thread.sleep(1);
+            }
+            return 0;
+        } catch (Exception ioe) {}
+
+        try {
+            connect();
+        } catch (IOException e) {}
+        return 0;
     }
 
     /** Обработчик для процесса соединения
