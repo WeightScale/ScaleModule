@@ -9,7 +9,7 @@ public enum Commands {
     /** Получить код микроконтроллера. */
     CMD_PART_CODE("PRC", 200),
     /** получить версию весов. */
-    CMD_VERSION("VRS", 2000),
+    CMD_VERSION("VRS", 200),
     /** получить/установить АЦП-фильтр. */
     CMD_FILTER("FAD", 200),
     /** получить/установить таймер выключения весов. */
@@ -17,13 +17,13 @@ public enum Commands {
     /** получить/установить скорость передачи данных. */
     CMD_SPEED("BST", 7000),
     /** получить offset. */
-    CMD_GET_OFFSET("GCO", 400),
+    CMD_GET_OFFSET("GCO", 500),
     /** установить offset. */
-    CMD_SET_OFFSET("SCO", 400),
+    CMD_SET_OFFSET("SCO", 500),
     /** получить передать заряд батареи. */
     CMD_BATTERY("GBT", 200),
     /** считать/записать данные температуры. */
-    CMD_DATA_TEMP("DTM", 400),
+    CMD_DATA_TEMP("DTM", 500),
     /** получить версию hardware. */
     CMD_HARDWARE("HRW", 200),
     /** установить имя весов. */
@@ -33,7 +33,7 @@ public enum Commands {
     /** Считать/записать данные весов. */
     CMD_DATA("DAT", 200),
     /** получить показание датчика веса. */
-    CMD_SENSOR("DCH", 400),
+    CMD_SENSOR("DCH", 500),
     /** считать/записать имя таблици созданой в google disc. */
     CMD_SPREADSHEET("SGD", 200),
     /** считать/записать account google disc. */
@@ -43,7 +43,7 @@ public enum Commands {
     /** считать/записать phone for sms boss. */
     CMD_PHONE("PHN", 200),
     /** получить показание датчика веса минус офсет. */
-    CMD_SENSOR_OFFSET("DCO", 400),
+    CMD_SENSOR_OFFSET("DCO", 500),
     /** Выключить питание модуля. */
     CMD_POWER_OFF("POF", 200),
     /** Значение сервис кода. */
@@ -70,12 +70,12 @@ public enum Commands {
 
     public boolean setParam(String param){
         cmd = name + param;
-        return interfaceVersions.command(this).equals(this.name);
+        return interfaceVersions.command(this).equals(name);
     }
 
     public boolean setParam(int param){
         cmd = name + param;
-        return interfaceVersions.command(this).equals(this.name);
+        return interfaceVersions.command(this).equals(name);
     }
 
     public static void setInterfaceCommand(InterfaceVersions i){

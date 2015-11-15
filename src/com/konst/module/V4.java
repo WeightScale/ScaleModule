@@ -35,9 +35,10 @@ class V4 extends Versions {
         phone = Commands.CMD_PHONE.getParam();
         //======================================================================
 
-        isDataValid(Commands.CMD_DATA.getParam());
+        parserData(Commands.CMD_DATA.getParam());
 
         weightMargin = (int) (weightMax * 1.2);
+        //marginTenzo = (int) ((weightMax * coefficientA) * 1.2);
         marginTenzo = (int) ((weightMax / coefficientA) * 1.2);
     }
 
@@ -49,7 +50,8 @@ class V4 extends Versions {
     protected synchronized int updateWeight() {
         try {
             sensorTenzoOffset = Integer.valueOf(Commands.CMD_SENSOR_OFFSET.getParam());
-            return weight = (int) (coefficientA * sensorTenzoOffset);
+            //return weight = (int) (sensorTenzoOffset / coefficientA );
+            return weight = (int) (sensorTenzoOffset * coefficientA );
         } catch (Exception e) {
             return sensorTenzoOffset = weight = Integer.MIN_VALUE;
         }
@@ -113,30 +115,32 @@ class V4 extends Versions {
      * @see V4#load()
      * @see Commands#CMD_DATA
      */
-    protected void isDataValid(String d) throws Exception {
+    protected void parserData(String d) throws Exception {
         String[] parts = d.split(" ", 0);
         SimpleCommandLineParser data = new SimpleCommandLineParser(parts, "=");
         Iterator<String> iteratorData = data.getKeyIterator();
         synchronized (this) {
             while (iteratorData.hasNext()) {
                 String dat = iteratorData.next();
-                //switch (iteratorData.next()) {
-                    if (InterfaceVersions.CMD_DATA_CFA.equals(dat)) {//case InterfaceVersions.CMD_DATA_CFA:
+                switch (iteratorData.next()) {
+                    case InterfaceVersions.CMD_DATA_CFA:
                         coefficientA = Float.valueOf(data.getValue(InterfaceVersions.CMD_DATA_CFA));//получаем коэфициент
                         if (coefficientA == 0.0f)
                             throw new ErrorModuleException("Коэффициент А=" + coefficientA);
-                    }//break;
-                    else if (InterfaceVersions.CMD_DATA_CFB.equals(dat)) {//case InterfaceVersions.CMD_DATA_CFB:
+                        break;
+                    case InterfaceVersions.CMD_DATA_CFB:
                         coefficientB = Float.valueOf(data.getValue(InterfaceVersions.CMD_DATA_CFB));//получить offset
-                    }// break;
-                    else if (InterfaceVersions.CMD_DATA_WGM.equals(dat)) {//case InterfaceVersions.CMD_DATA_WGM:
+                        break;
+                    case InterfaceVersions.CMD_DATA_WGM:
                         weightMax = Integer.parseInt(data.getValue(InterfaceVersions.CMD_DATA_WGM));//получаем макимальнай вес
                         if (weightMax <= 0)
                             throw new ErrorModuleException("Предельный вес =" + weightMax);
-                    }//break;
-                    else if (InterfaceVersions.CMD_DATA_LMT.equals(dat)) {//case InterfaceVersions.CMD_DATA_LMT:
+                        break;
+                    case InterfaceVersions.CMD_DATA_LMT:
                         limitTenzo = Integer.parseInt(data.getValue(InterfaceVersions.CMD_DATA_LMT));//получаем макимальнай показание перегруза
-                    }//break;
+                        break;
+                    default:
+                }
             }
         }
     }

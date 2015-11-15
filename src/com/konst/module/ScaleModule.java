@@ -2,6 +2,8 @@ package com.konst.module; /**
  * Copyright (c) 2015.
  */
 
+import android.os.Build;
+
 import java.io.*;
 import java.util.concurrent.TimeUnit;
 
@@ -123,7 +125,7 @@ public class ScaleModule extends Module {
     public synchronized void connect() throws IOException, NullPointerException {
         disconnect();
         // Get a BluetoothSocket for a connection with the given BluetoothDevice
-        if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.HONEYCOMB)
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB)
             socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
         else
             socket = device.createRfcommSocketToServiceRecord(uuid);

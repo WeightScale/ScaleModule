@@ -3,14 +3,9 @@ package com.konst.module;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.os.Build;
 import android.os.Handler;
-import android.os.ParcelUuid;
-import android.text.TextUtils;
 
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -29,7 +24,7 @@ public abstract class Module implements InterfaceVersions {
      * Bluetooth адаптер терминала.
      */
     protected final BluetoothAdapter bluetoothAdapter;
-    UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    final UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     protected BluetoothSocket socket;
     protected BufferedReader bufferedReader;
     //protected OutputStreamWriter outputStreamWriter;
@@ -171,7 +166,7 @@ public abstract class Module implements InterfaceVersions {
     public synchronized String command(Commands cmd) {
         try {
             sendCommand(cmd.toString());
-            String substring = "";
+            String substring;
             for (int i = 0; i < cmd.getTimeOut(); ++i) {
                 Thread.sleep(1L);
 
@@ -202,7 +197,7 @@ public abstract class Module implements InterfaceVersions {
      */
     private synchronized void sendCommand(String cmd) throws IOException {
 
-        bufferedWriter.write(cmd.toString());
+        bufferedWriter.write(cmd);
         bufferedWriter.write("\r");
         bufferedWriter.newLine();
         bufferedWriter.flush();

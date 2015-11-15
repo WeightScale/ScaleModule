@@ -17,7 +17,7 @@ class V1 extends Versions {
         //==============================================================================================================
         loadSpeedModule();
         //==============================================================================================================
-        isDataValid(Commands.CMD_DATA.getParam());
+        parserData(Commands.CMD_DATA.getParam());
 
         weightMargin = (int) (weightMax * 1.2);
     }
@@ -26,7 +26,8 @@ class V1 extends Versions {
     protected synchronized int updateWeight() {
         try {
             sensorTenzo = Integer.valueOf(Commands.CMD_SENSOR.getParam());
-            return weight = (int) (coefficientA * sensorTenzo + coefficientB);
+            //return weight = (int) (coefficientA/sensorTenzo  + coefficientB);
+            return weight = (int) (coefficientA*sensorTenzo  + coefficientB);
         } catch (Exception e) {
             return sensorTenzo = weight = Integer.MIN_VALUE;
         }
@@ -40,7 +41,8 @@ class V1 extends Versions {
     @Override
     protected synchronized boolean setOffsetScale() { //обнуление
         try {
-            coefficientB = -coefficientA * Integer.parseInt(Commands.CMD_SENSOR.getParam());
+            //coefficientB = -Integer.parseInt(Commands.CMD_SENSOR.getParam())/coefficientA;
+            coefficientB = -coefficientA*Integer.parseInt(Commands.CMD_SENSOR.getParam());
         } catch (Exception e) {
             return false;
         }
@@ -98,7 +100,7 @@ class V1 extends Versions {
         return false;
     }
 
-    protected void isDataValid(String d) throws Exception {
+    protected void parserData(String d) throws Exception {
         StringBuilder dataBuffer = new StringBuilder(d);
         synchronized (this) {
             dataBuffer.deleteCharAt(0);

@@ -157,11 +157,11 @@ abstract class Versions  {
     }
 
     protected void loadSpeedModule() throws Exception {
-        setSpeedPort(Integer.valueOf(module.getModuleSpeedPort()));
-        if (getSpeedPort() < 1 || getSpeedPort() > 5) {
+        speedPort = Integer.valueOf(module.getModuleSpeedPort());
+        if (speedPort < 1 || speedPort > 5) {
             if (!module.setModuleSpeedPort(5))
                 throw new ErrorModuleException("Скорость передачи не установлена в настройках");
-            setSpeedPort(5);
+            speedPort = 5;
         }
     }
 
@@ -222,7 +222,7 @@ abstract class Versions  {
         private final Map<String, String> argMap;
 
         public SimpleCommandLineParser(String[] arg, String predict) {
-            argMap = new HashMap<String, String>();
+            argMap = new HashMap<>();
             for (String anArg : arg) {
                 String[] str = anArg.split(predict, 2);
                 if (str.length > 1) {
