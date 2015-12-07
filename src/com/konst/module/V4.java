@@ -121,7 +121,6 @@ class V4 extends Versions {
         Iterator<String> iteratorData = data.getKeyIterator();
         synchronized (this) {
             while (iteratorData.hasNext()) {
-                String dat = iteratorData.next();
                 switch (iteratorData.next()) {
                     case InterfaceVersions.CMD_DATA_CFA:
                         coefficientA = Float.valueOf(data.getValue(InterfaceVersions.CMD_DATA_CFA));//получаем коэфициент

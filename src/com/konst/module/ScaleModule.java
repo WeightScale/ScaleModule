@@ -31,9 +31,6 @@ public class ScaleModule extends Module {
     protected int timerNull;
     private int numVersion;
     private final String versionName;
-    public OnEventResultWeight onEventResultWeight;
-    public OnEventResultBatteryTemperature onEventResultBatteryTemperature;
-    RunnableScaleAttach runnableScaleAttach;
 
     /**
      * Константы результата взвешивания
@@ -72,13 +69,11 @@ public class ScaleModule extends Module {
     }
 
     public ScaleModule(String moduleVersion) throws Exception {
-        runnableScaleAttach = new RunnableScaleAttach();
         versionName = moduleVersion;
     }
 
     public ScaleModule(String moduleVersion, OnEventConnectResult event) throws Exception {
         super(event);
-        runnableScaleAttach = new RunnableScaleAttach();
         versionName = moduleVersion;
     }
 
@@ -87,25 +82,8 @@ public class ScaleModule extends Module {
      */
     @Override
     public void attach() /*throws InterruptedException*/ {
-        //final Throwable[] initException = {null};
         onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
-        //new Thread(runnableScaleConnect).start();
-        /*Thread t = new ConnectClientThread(getDevice());
-        t.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread thread, Throwable ex) {
-                initException[0] = ex;
-            }
-        });
-        t.start();
-        t.join();
-
-        if (initException[0] != null){
-            onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
-            throw new InterruptedException(initException[0].getMessage());
-        }*/
-
-        new Thread(runnableScaleAttach).start();
+        new RunnableScaleAttach();
     }
 
     /**
@@ -114,7 +92,6 @@ public class ScaleModule extends Module {
      */
     @Override
     public void dettach() {
-        //removeCallbacksAndMessages(null);todo проверка без handel
         stopMeasuringWeight(true);
         stopMeasuringBatteryTemperature(true);
         disconnect();
@@ -152,14 +129,14 @@ public class ScaleModule extends Module {
         socket = null;
     }
 
-    final MeasuringWeight measuringWeight = new MeasuringWeight() {
+    final ProcessWeight processWeight = new ProcessWeight() {
         @Override
         public int onEvent(ResultWeight what, int weight, int sensor) {
             return resultMeasuring.weight(what,weight,sensor);
         }
     };
 
-    final MeasuringBatteryTemperature measuringBatteryTemperature = new MeasuringBatteryTemperature() {
+    final ProcessBatteryTemperature processBatteryTemperature = new ProcessBatteryTemperature() {
         @Override
         public int onEvent(int battery, int temperature) {
             return resultMeasuring.batteryTemperature(battery, temperature);
@@ -657,38 +634,40 @@ public class ScaleModule extends Module {
     }
 
     public void startMeasuringWeight(){
-        measuringWeight.start();
+        processWeight.start();
     }
     public void stopMeasuringWeight(boolean flag){
-        measuringWeight.stop(flag);
+        processWeight.stop(flag);
     }
 
     public void startMeasuringBatteryTemperature(){
-        measuringBatteryTemperature.start();
+        processBatteryTemperature.start();
     }
+
     public void stopMeasuringBatteryTemperature(boolean flag){
-        measuringBatteryTemperature.stop(flag);
+        processBatteryTemperature.stop(flag);
     }
 
     public void setOnEventResultWeight(OnEventResultWeight onEventResultWeight) {
-        measuringWeight.setResultMeasuring(onEventResultWeight);
+        processWeight.setResultMeasuring(onEventResultWeight);
     }
 
     public void setOnEventResultBatteryTemperature(OnEventResultBatteryTemperature onEventResultBatteryTemperature) {
-        measuringBatteryTemperature.setResultMeasuring(onEventResultBatteryTemperature);
+        processBatteryTemperature.setResultMeasuring(onEventResultBatteryTemperature);
     }
 
-    /*public void setOnEventResultMeasuring(OnEventResultMeasuring onEventResultMeasuring) {
-        //this.onEventResultMeasuring = onEventResultMeasuring;
-        measuringWeight.setResultMeasuring(onEventResultMeasuring);
-        measuringBatteryTemperature.setResultMeasuring(onEventResultMeasuring);
-    }*/
-
     public void resetAutoNull(){
-        measuringBatteryTemperature.resetAutoNull();
+        //measuringBatteryTemperature.resetAutoNull();
+        processBatteryTemperature.resetNull();
     }
 
     class RunnableScaleAttach implements Runnable{
+        Thread thread;
+
+        RunnableScaleAttach(){
+            thread = new Thread(this);
+            thread.start();
+        }
 
         @Override
         public void run() {
@@ -717,75 +696,35 @@ public class ScaleModule extends Module {
     }
 
     /**
-     * Класс для обработки показаний батареи и температуры надо использевать после
-     * создания класса com.kostya.module.ScaleModule и инициализации метода init().
+     * Класс для обработки показаний батареи и температуры.
      */
-    public abstract class MeasuringBatteryTemperature {
-        final RunnableBatteryTemperature runnableBatteryTemperature;
-        OnEventResultBatteryTemperature resultMeasuring;
+    private abstract class ProcessBatteryTemperature implements Runnable{
+        private Thread thread;
+        protected OnEventResultBatteryTemperature resultMeasuring;
+        private volatile boolean cancelled;
+        /** счётчик автообнуления */
+        private int autoNull;
+        /** Время обновления в секундах. */
+        private int timeUpdate = 1;
 
         /** Метод посылает значения веса и датчика.
-         //* @param battery     результат заряд батареи в процентах.
-         //* @param temperature результат температуры в градусах.
+         * @param battery     результат заряд батареи в процентах.
+         * @param temperature результат температуры в градусах.
          * @return возвращяет время для обновления показаний в секундах.
          */
         public abstract int onEvent(int battery, int temperature);
-
-        protected MeasuringBatteryTemperature(){
-            runnableBatteryTemperature = new RunnableBatteryTemperature();
-        }
 
         public void setResultMeasuring(OnEventResultBatteryTemperature resultMeasuring) {
             this.resultMeasuring = resultMeasuring;
         }
 
-        /** Метод запускает или останавливает процесс измерения.
-         * @param process true запускаем процесс false останавливаем.
-         */
-        private void process(final boolean process, boolean wait) {
-            try {
-                if (isAttach()) {
-                    if(process){
-                        if (!runnableBatteryTemperature.isStart()) {
-                            new Thread(runnableBatteryTemperature).start();
-                        }
-                    }else{
-                        runnableBatteryTemperature.cancel();
-                    }
-
-                    if (!process){
-                        if(wait){
-                            while (runnableBatteryTemperature.isStart()) {}
-                        }
-                    }
-                }
-
-            } catch (Exception e) {
-            }
-        }
-
-        public void resetAutoNull() {
-            runnableBatteryTemperature.resetNull();
-        }
-
-        private class RunnableBatteryTemperature implements Runnable{
-            private boolean start;
-            private volatile boolean cancelled;
-            /** счётчик автообнуления */
-            private int autoNull;
-            /**
-             * Время обновления в секундах
-             */
-            public int timeUpdate = 1;
-
-            @Override
-            public void run() {
-                start = true;
-                cancelled = false;
-
-                while (!cancelled) {
-                    timeUpdate = onEvent(getModuleBatteryCharge(), getModuleTemperature());
-                    try { TimeUnit.SECONDS.sleep(timeUpdate); } catch (InterruptedException ignored) {}
+        @Override
+        public void run() {
+            cancelled = false;
+            while (!cancelled) {
+                timeUpdate = onEvent(getModuleBatteryCharge(), getModuleTemperature());
+                try { TimeUnit.SECONDS.sleep(timeUpdate); } catch (InterruptedException ignored) {}
+                try {
                     if (version.weight != Integer.MIN_VALUE && Math.abs(version.weight) < weightError) { //автоноль
                         autoNull += 1;
                         if (autoNull > timerNull / InterfaceVersions.DIVIDER_AUTO_NULL) {
@@ -795,48 +734,55 @@ public class ScaleModule extends Module {
                     } else {
                         autoNull = 0;
                     }
-                }
-                start = false;
+                }catch (NullPointerException e){}
             }
-
-            private boolean isStart() {return start;}
-
-            private synchronized void cancel() {  cancelled = true;  }
-
-            private void resetNull() { autoNull = 0; }
         }
+
+        private synchronized void cancel() {  cancelled = true;  }
+
+        /** Сброс счетчика авто ноль. */
+        private void resetNull() { autoNull = 0; }
 
         /** Запускаем измерение.  */
         public void start(){
-            process(true, false);
+            if(this.thread == null){
+                this.thread = new Thread(this);
+                this.thread.setDaemon(true);
+                this.thread.start();
+            }
         }
 
         /** Останавливаем измерение.
          * @param flag true - ждем остановки измерения.
          */
         public void stop(boolean flag){
-            process(false, flag);
+            cancelled = true;
+            boolean retry = true;
+            while(retry){
+                try {
+                    if(this.thread.isAlive()){
+                        if(flag)
+                            this.thread.join(10000);
+                        else
+                            this.thread.interrupt();
+                    }
+                    retry = false;
+                } catch (NullPointerException | InterruptedException e) {
+                    retry = false;
+                }
+            }
+            this.thread = null;
         }
     }
 
-    /** Класс обработки показаний веса и значения датчика.
-     * Надо использевать после создания класса com.kostya.module.ScaleModule
-     * и инициализации метода init().
-     */
-    public abstract class MeasuringWeight {
-        final RunnableWeight runnableWeight;
-        OnEventResultWeight resultMeasuring;
+    /** Класс обработки показаний веса и значения датчика. */
+    private abstract class ProcessWeight implements Runnable{
+        private Thread thread;
+        protected OnEventResultWeight resultMeasuring;
+        private volatile boolean cancelled;
+        private int timeUpdate = 50;
 
-        protected MeasuringWeight(){
-            runnableWeight = new RunnableWeight();
-            //resultMeasuring = onEventResultMeasuring;
-        }
-
-        public void setResultMeasuring(OnEventResultWeight resultMeasuring) {
-            this.resultMeasuring = resultMeasuring;
-        }
-
-        /**Метод возвращяет значения веса и датчика.
+        /** Метод возвращяет значения веса и датчика.
          * @param what   результат статуса измерения enum ResultWeight.
          * @param weight результат веса.
          * @param sensor результат показаний датчика веса.
@@ -844,74 +790,63 @@ public class ScaleModule extends Module {
          */
         public abstract int onEvent(ResultWeight what, int weight, int sensor);
 
-        /**Метод запускает или останавливает процесс измерения.
-         * @param process true запускаем процесс false останавливаем.
-         */
-        private void process(final boolean process, boolean wait) {
-            try {
-                if (isAttach()) {
-                    if(process){
-                        if (!runnableWeight.isStart()) {
-                            new Thread(runnableWeight).start();
-                        }
-                    }else{
-                        runnableWeight.cancel();
-                    }
-
-                    if (!process){
-                        if(wait){
-                            while (runnableWeight.isStart()) {}
-                        }
-                    }
-                }
-            } catch (Exception e) { }
+        public void setResultMeasuring(OnEventResultWeight resultMeasuring) {
+            this.resultMeasuring = resultMeasuring;
         }
 
-        private class RunnableWeight implements Runnable{
-            private volatile boolean cancelled;
-            private boolean start;
-            public int timeUpdate = 50;
-
-            @Override
-            public void run() {
-                start = true;
-                cancelled = false;
-                while (!cancelled) {
-                    updateWeight();
-                    ResultWeight msg;
-                    if (version.weight == Integer.MIN_VALUE) {
-                        msg = ResultWeight.WEIGHT_ERROR;
-                    } else {
-                        if (isLimit())
-                            msg = isMargin() ? ResultWeight.WEIGHT_MARGIN : ResultWeight.WEIGHT_LIMIT;
-                        else {
-                            msg = ResultWeight.WEIGHT_NORMAL;
-                        }
+        @Override
+        public void run() {
+            cancelled = false;
+            while (!cancelled) {
+                updateWeight();
+                ResultWeight msg;
+                if (version.weight == Integer.MIN_VALUE) {
+                    msg = ResultWeight.WEIGHT_ERROR;
+                } else {
+                    if (isLimit())
+                        msg = isMargin() ? ResultWeight.WEIGHT_MARGIN : ResultWeight.WEIGHT_LIMIT;
+                    else {
+                        msg = ResultWeight.WEIGHT_NORMAL;
                     }
-                    timeUpdate = onEvent(msg, version.weight, getSensorTenzo());
-                    try { Thread.sleep(timeUpdate); } catch ( InterruptedException ignored) {}
                 }
-                start = false;
-            }
-
-            private boolean isStart() {return start;}
-
-            private synchronized void cancel() {
-                cancelled = true;
+                timeUpdate = onEvent(msg, version.weight, getSensorTenzo());
+                try { Thread.sleep(timeUpdate); } catch ( InterruptedException ignored) {}
             }
         }
 
-        /** Запускаем измерение.         *
-         */
+        private synchronized void cancel() {
+            cancelled = true;
+        }
+
+        /** Запускаем измерение. */
         public void start(){
-            process(true, false);
+            if(this.thread == null){
+                this.thread = new Thread(this);
+                this.thread.setDaemon(true);
+                this.thread.start();
+            }
         }
 
         /** Останавливаем измерение.
          * @param flag true - ждем остановки измерения.
          */
         public void stop(boolean flag){
-            process(false, flag);
+            cancelled = true;
+            boolean retry = true;
+            while(retry){
+                try {
+                    if(this.thread.isAlive()){
+                        if(flag)
+                            this.thread.join(10000);
+                        else
+                            this.thread.interrupt();
+                    }
+                    retry = false;
+                } catch (NullPointerException | InterruptedException e) {
+                    retry = false;
+                }
+            }
+            this.thread = null;
         }
     }
 }

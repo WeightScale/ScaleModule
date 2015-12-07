@@ -15,7 +15,6 @@ import java.util.concurrent.TimeUnit;
  * @author Kostya
  */
 public abstract class Module implements InterfaceVersions {
-    Module module;
     /**
      * Bluetooth устройство модуля весов.
      */
@@ -103,7 +102,6 @@ public abstract class Module implements InterfaceVersions {
         if(flagTimeout)
             throw new Exception("Timeout enabled bluetooth");
         Commands.setInterfaceCommand(this);
-        module = this;
     }
 
     protected Module(OnEventConnectResult event) throws Exception{
@@ -124,7 +122,6 @@ public abstract class Module implements InterfaceVersions {
             throw new Exception("Timeout enabled bluetooth");
         onEventConnectResult = event;
         Commands.setInterfaceCommand(this);
-        module = this;
     }
 
     public void setOnEventConnectResult(OnEventConnectResult onEventConnectResult) {
@@ -166,12 +163,11 @@ public abstract class Module implements InterfaceVersions {
     public synchronized String command(Commands cmd) {
         try {
             sendCommand(cmd.toString());
-            String substring;
             for (int i = 0; i < cmd.getTimeOut(); ++i) {
                 Thread.sleep(1L);
 
                 if (bufferedReader.ready()) {
-                    substring = bufferedReader.readLine();
+                    String substring = bufferedReader.readLine();
                     if(substring == null)
                         continue;
                     if (substring.startsWith(cmd.getName())){
