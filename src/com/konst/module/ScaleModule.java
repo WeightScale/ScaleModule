@@ -57,14 +57,14 @@ public class ScaleModule extends Module {
     /**
      * Интерфейс события результат вес.
      */
-    public interface OnEventResultWeight{
+    public interface WeightCallback{
         int weight(ResultWeight what, int weight, int sensor);
     }
 
     /**
      * Интерфейс события результат батарея и температура.
      */
-    public interface OnEventResultBatteryTemperature{
+    public interface BatteryTemperatureCallback{
         int batteryTemperature(int battery, int temperature);
     }
 
@@ -72,17 +72,14 @@ public class ScaleModule extends Module {
         versionName = moduleVersion;
     }
 
-    public ScaleModule(String moduleVersion, OnEventConnectResult event) throws Exception {
+    public ScaleModule(String moduleVersion, ConnectResultCallback event) throws Exception {
         super(event);
         versionName = moduleVersion;
     }
 
-    /**
-     * Соединится с модулем.
-     */
+    /** Соединится с модулем. */
     @Override
     public void attach() /*throws InterruptedException*/ {
-        onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
         new RunnableScaleAttach();
     }
 
@@ -215,11 +212,10 @@ public class ScaleModule extends Module {
         return version != null;
     }
 
-    /**
-     * Определяем после соединения это весовой модуль и какой версии
-     * указаной при инициализации класса com.kostya.module.ScaleModule.
+    /** Определяем после соединения это весовой модуль и какой версии.
+     * Проверяем версию указаной при инициализации класса com.kostya.module.ScaleModule.
      *
-     * @return true версия правильная
+     * @return true версия правильная.
      */
     public boolean isScales() {
         String vrs = getModuleVersion(); //Получаем версию весов
@@ -648,12 +644,12 @@ public class ScaleModule extends Module {
         processBatteryTemperature.stop(flag);
     }
 
-    public void setOnEventResultWeight(OnEventResultWeight onEventResultWeight) {
-        processWeight.setResultMeasuring(onEventResultWeight);
+    public void setWeightCallback(WeightCallback weightCallback) {
+        processWeight.setResultMeasuring(weightCallback);
     }
 
-    public void setOnEventResultBatteryTemperature(OnEventResultBatteryTemperature onEventResultBatteryTemperature) {
-        processBatteryTemperature.setResultMeasuring(onEventResultBatteryTemperature);
+    public void setBatteryTemperatureCallback(BatteryTemperatureCallback batteryTemperatureCallback) {
+        processBatteryTemperature.setResultMeasuring(batteryTemperatureCallback);
     }
 
     public void resetAutoNull(){
@@ -665,6 +661,7 @@ public class ScaleModule extends Module {
         Thread thread;
 
         RunnableScaleAttach(){
+            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_START);
             thread = new Thread(this);
             thread.start();
         }
@@ -676,36 +673,34 @@ public class ScaleModule extends Module {
                 if (isScales()) {
                     try {
                         load();
-                        onEventConnectResult.handleResultConnect(ResultConnect.STATUS_LOAD_OK);
+                        connectResultCallback.resultConnect(ResultConnect.STATUS_LOAD_OK);
                     } catch (Versions.ErrorModuleException e) {
-                        onEventConnectResult.handleConnectError(ResultError.MODULE_ERROR, e.getMessage());
+                        connectResultCallback.connectError(ResultError.MODULE_ERROR, e.getMessage());
                     } catch (Versions.ErrorTerminalException e) {
-                        onEventConnectResult.handleConnectError(ResultError.TERMINAL_ERROR, e.getMessage());
+                        connectResultCallback.connectError(ResultError.TERMINAL_ERROR, e.getMessage());
                     } catch (Exception e) {
-                        onEventConnectResult.handleConnectError(ResultError.MODULE_ERROR, e.getMessage());
+                        connectResultCallback.connectError(ResultError.MODULE_ERROR, e.getMessage());
                     }
                 } else {
                     disconnect();
-                    onEventConnectResult.handleResultConnect(ResultConnect.STATUS_VERSION_UNKNOWN);
+                    connectResultCallback.resultConnect(ResultConnect.STATUS_VERSION_UNKNOWN);
                 }
             } catch (IOException e) {
-                onEventConnectResult.handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
+                connectResultCallback.connectError(ResultError.CONNECT_ERROR, e.getMessage());
             }
-            onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
+            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_FINISH);
         }
     }
 
-    /**
-     * Класс для обработки показаний батареи и температуры.
-     */
+    /** Класс для обработки показаний батареи и температуры. */
     private abstract class ProcessBatteryTemperature implements Runnable{
         private Thread thread;
-        protected OnEventResultBatteryTemperature resultMeasuring;
+        protected BatteryTemperatureCallback resultMeasuring;
         private volatile boolean cancelled;
         /** счётчик автообнуления */
         private int autoNull;
-        /** Время обновления в секундах. */
-        private int timeUpdate = 1;
+        /** Время обновления в милисекундах. */
+        private int timeUpdate = 1000;
 
         /** Метод посылает значения веса и датчика.
          * @param battery     результат заряд батареи в процентах.
@@ -714,7 +709,7 @@ public class ScaleModule extends Module {
          */
         public abstract int onEvent(int battery, int temperature);
 
-        public void setResultMeasuring(OnEventResultBatteryTemperature resultMeasuring) {
+        public void setResultMeasuring(BatteryTemperatureCallback resultMeasuring) {
             this.resultMeasuring = resultMeasuring;
         }
 
@@ -723,7 +718,9 @@ public class ScaleModule extends Module {
             cancelled = false;
             while (!cancelled) {
                 timeUpdate = onEvent(getModuleBatteryCharge(), getModuleTemperature());
-                try { TimeUnit.SECONDS.sleep(timeUpdate); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(timeUpdate); } catch (InterruptedException ignored) {}
+                if (cancelled)
+                    break;
                 try {
                     if (version.weight != Integer.MIN_VALUE && Math.abs(version.weight) < weightError) { //автоноль
                         autoNull += 1;
@@ -747,7 +744,7 @@ public class ScaleModule extends Module {
         public void start(){
             if(this.thread == null){
                 this.thread = new Thread(this);
-                this.thread.setDaemon(true);
+                //this.thread.setDaemon(true);
                 this.thread.start();
             }
         }
@@ -762,7 +759,7 @@ public class ScaleModule extends Module {
                 try {
                     if(this.thread.isAlive()){
                         if(flag)
-                            this.thread.join(10000);
+                            this.thread.join(timeUpdate * 2);
                         else
                             this.thread.interrupt();
                     }
@@ -778,8 +775,9 @@ public class ScaleModule extends Module {
     /** Класс обработки показаний веса и значения датчика. */
     private abstract class ProcessWeight implements Runnable{
         private Thread thread;
-        protected OnEventResultWeight resultMeasuring;
+        protected WeightCallback resultMeasuring;
         private volatile boolean cancelled;
+        /** Время обновления в милисекундах. */
         private int timeUpdate = 50;
 
         /** Метод возвращяет значения веса и датчика.
@@ -790,7 +788,7 @@ public class ScaleModule extends Module {
          */
         public abstract int onEvent(ResultWeight what, int weight, int sensor);
 
-        public void setResultMeasuring(OnEventResultWeight resultMeasuring) {
+        public void setResultMeasuring(WeightCallback resultMeasuring) {
             this.resultMeasuring = resultMeasuring;
         }
 
@@ -800,16 +798,18 @@ public class ScaleModule extends Module {
             while (!cancelled) {
                 updateWeight();
                 ResultWeight msg;
-                if (version.weight == Integer.MIN_VALUE) {
-                    msg = ResultWeight.WEIGHT_ERROR;
-                } else {
-                    if (isLimit())
-                        msg = isMargin() ? ResultWeight.WEIGHT_MARGIN : ResultWeight.WEIGHT_LIMIT;
-                    else {
-                        msg = ResultWeight.WEIGHT_NORMAL;
+                try{
+                    if (version.weight == Integer.MIN_VALUE) {
+                        msg = ResultWeight.WEIGHT_ERROR;
+                    } else {
+                        if (isLimit())
+                            msg = isMargin() ? ResultWeight.WEIGHT_MARGIN : ResultWeight.WEIGHT_LIMIT;
+                        else {
+                            msg = ResultWeight.WEIGHT_NORMAL;
+                        }
                     }
-                }
-                timeUpdate = onEvent(msg, version.weight, getSensorTenzo());
+                    timeUpdate = onEvent(msg, version.weight, getSensorTenzo());
+                }catch (NullPointerException e){}
                 try { Thread.sleep(timeUpdate); } catch ( InterruptedException ignored) {}
             }
         }
@@ -822,7 +822,7 @@ public class ScaleModule extends Module {
         public void start(){
             if(this.thread == null){
                 this.thread = new Thread(this);
-                this.thread.setDaemon(true);
+                //this.thread.setDaemon(true);
                 this.thread.start();
             }
         }
@@ -837,7 +837,7 @@ public class ScaleModule extends Module {
                 try {
                     if(this.thread.isAlive()){
                         if(flag)
-                            this.thread.join(10000);
+                            this.thread.join(timeUpdate * 2);
                         else
                             this.thread.interrupt();
                     }

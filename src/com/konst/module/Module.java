@@ -28,7 +28,7 @@ public abstract class Module implements InterfaceVersions {
     protected BufferedReader bufferedReader;
     //protected OutputStreamWriter outputStreamWriter;
     protected BufferedWriter bufferedWriter;
-    OnEventConnectResult onEventConnectResult;
+    ConnectResultCallback connectResultCallback;
 
     /**
      * Константы результат соединения
@@ -104,7 +104,7 @@ public abstract class Module implements InterfaceVersions {
         Commands.setInterfaceCommand(this);
     }
 
-    protected Module(OnEventConnectResult event) throws Exception{
+    protected Module(ConnectResultCallback event) throws Exception{
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
             throw new Exception("Bluetooth adapter missing");
@@ -120,12 +120,12 @@ public abstract class Module implements InterfaceVersions {
         while (!bluetoothAdapter.isEnabled() && !flagTimeout) ;//ждем включения bluetooth
         if(flagTimeout)
             throw new Exception("Timeout enabled bluetooth");
-        onEventConnectResult = event;
+        connectResultCallback = event;
         Commands.setInterfaceCommand(this);
     }
 
-    public void setOnEventConnectResult(OnEventConnectResult onEventConnectResult) {
-        this.onEventConnectResult = onEventConnectResult;
+    public void setConnectResultCallback(ConnectResultCallback connectResultCallback) {
+        this.connectResultCallback = connectResultCallback;
     }
 
     /** Инициализация bluetooth адаптера и модуля.

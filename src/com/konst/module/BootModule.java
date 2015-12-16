@@ -23,7 +23,7 @@ public class BootModule extends Module {
     /** Конструктор модуля бутлодера.
      * @param version Верситя бутлодера.
      */
-    public BootModule(String version, OnEventConnectResult event)throws Exception{
+    public BootModule(String version, ConnectResultCallback event)throws Exception{
         super(event);
         runnableBootConnect = new RunnableBootConnect();
         versionName = version;
@@ -32,7 +32,7 @@ public class BootModule extends Module {
 
     @Override
     public void attach(){
-        onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_START);
+        connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_START);
         new Thread(runnableBootConnect).start();
     }
 
@@ -148,16 +148,16 @@ public class BootModule extends Module {
             try {
                 connect();
                 if(isBootloader()){
-                    onEventConnectResult.handleResultConnect(ResultConnect.STATUS_LOAD_OK);
+                    connectResultCallback.resultConnect(ResultConnect.STATUS_LOAD_OK);
                 }else {
                     disconnect();
-                    onEventConnectResult.handleResultConnect(ResultConnect.STATUS_VERSION_UNKNOWN);
+                    connectResultCallback.resultConnect(ResultConnect.STATUS_VERSION_UNKNOWN);
                 }
 
             } catch (IOException e) {
-                onEventConnectResult.handleConnectError(ResultError.CONNECT_ERROR, e.getMessage());
+                connectResultCallback.connectError(ResultError.CONNECT_ERROR, e.getMessage());
             }
-            onEventConnectResult.handleResultConnect(ResultConnect.STATUS_ATTACH_FINISH);
+            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_FINISH);
         }
     }
 

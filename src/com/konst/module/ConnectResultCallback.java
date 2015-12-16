@@ -3,14 +3,14 @@ package com.konst.module;
 /**
  * @author Kostya
  */
-public interface OnEventConnectResult {
+public interface ConnectResultCallback {
 
     /**Сообщения о результате соединения.
      * Используется при инициализации метода init().
      * @param what Результат соединения константа ResultConnect
      * @see Module.ResultConnect
      */
-    void handleResultConnect(Module.ResultConnect what);
+    void resultConnect(Module.ResultConnect what);
 
     /**Сообщения об ошибках соединения.
      * Используется при инициализаци метода init().
@@ -18,5 +18,5 @@ public interface OnEventConnectResult {
      * @param error описание ошибки
      * @see Module.ResultError
      */
-    void handleConnectError(Module.ResultError what, String error);
+    void connectError(Module.ResultError what, String error);
 }
