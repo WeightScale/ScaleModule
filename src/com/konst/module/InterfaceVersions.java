@@ -58,6 +58,6 @@ public interface InterfaceVersions {
      */
     String CMD_DATA_LMT = "lmt";
 
-    String command(Commands cmd);
+    String command(Commands commands);
 
 }

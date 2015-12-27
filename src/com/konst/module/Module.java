@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 
+import java.io.BufferedWriter;
 import java.io.*;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -15,58 +16,38 @@ import java.util.concurrent.TimeUnit;
  * @author Kostya
  */
 public abstract class Module implements InterfaceVersions {
-    /**
-     * Bluetooth устройство модуля весов.
-     */
+    /** Bluetooth устройство модуля весов. */
     protected BluetoothDevice device;
-    /**
-     * Bluetooth адаптер терминала.
-     */
+    /** Bluetooth адаптер терминала. */
     protected final BluetoothAdapter bluetoothAdapter;
     final UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     protected BluetoothSocket socket;
     protected BufferedReader bufferedReader;
     //protected OutputStreamWriter outputStreamWriter;
+    //protected InputStreamReader inputStreamReader;
     protected BufferedWriter bufferedWriter;
     ConnectResultCallback connectResultCallback;
+    //Handler handlerConnect;
 
-    /**
-     * Константы результат соединения
-     */
+    /** Константы результат соединения.  */
     public enum ResultConnect {
-        /**
-         * Соединение и загрузка данных из весового модуля успешно
-         */
+        /** Соединение и загрузка данных из весового модуля успешно. */
         STATUS_LOAD_OK,
-        /**
-         * Неизвесная вервия весового модуля
-         */
+        /** Неизвесная вервия весового модуля. */
         STATUS_VERSION_UNKNOWN,
-        /**
-         * Конец стадии присоединения (можно использовать для закрытия прогресс диалога)
-         */
+        /** Конец стадии присоединения (можно использовать для закрытия прогресс диалога). */
         STATUS_ATTACH_FINISH,
-        /**
-         * Начало стадии присоединения (можно использовать для открытия прогресс диалога)
-         */
+        /** Начало стадии присоединения (можно использовать для открытия прогресс диалога). */
         STATUS_ATTACH_START
     }
 
-    /**
-     * Константы ошибок соединения
-     */
+    /** Константы ошибок соединения. */
     public enum ResultError {
-        /**
-         * Ошибка настриек терминала
-         */
+        /** Ошибка настриек терминала. */
         TERMINAL_ERROR,
-        /**
-         * Ошибка настроек весового модуля
-         */
+        /** Ошибка настроек весового модуля. */
         MODULE_ERROR,
-        /**
-         * Ошибка соединения с модулем
-         */
+        /** Ошибка соединения с модулем. */
         CONNECT_ERROR
     }
 
@@ -139,8 +120,7 @@ public abstract class Module implements InterfaceVersions {
         this.device = device;
     }
 
-    /**
-     * Инициализация и соединение с весовым модулем.
+    /** Инициализация и соединение с весовым модулем.
      *
      * @param address Адресс bluetooth.
      * @throws NullPointerException
@@ -150,29 +130,27 @@ public abstract class Module implements InterfaceVersions {
         device = bluetoothAdapter.getRemoteDevice(address);
     }
 
-    /**
-     * Послать команду к модулю и получить ответ
+    /** Послать команду к модулю и получить ответ.
      *
-     * @param cmd Команда в текстовом виде. Формат [команда][параметр] параметр может быть пустым.
+     * @param commands Команда в текстовом виде. Формат [команда][параметр] параметр может быть пустым.
      *            Если есть парамет то обрабатывается параметр, иначе команда возвращяет параметр.
      * @return Имя команды или параметр. Если вернулась имя команды то посланый параметр обработан удачно.
      * Если вернулась пустая строка то команда не выполнена.
      * @see InterfaceVersions
      */
     @Override
-    public synchronized String command(Commands cmd) {
+    public synchronized String command(Commands commands) {
         try {
-            sendCommand(cmd.toString());
-            for (int i = 0; i < cmd.getTimeOut(); ++i) {
+            sendCommand(commands.toString());
+            for (int i = 0; i < commands.getTimeOut(); ++i) {
                 Thread.sleep(1L);
-
                 if (bufferedReader.ready()) {
                     String substring = bufferedReader.readLine();
                     if(substring == null)
                         continue;
-                    if (substring.startsWith(cmd.getName())){
-                        substring = substring.replace(cmd.getName(),"");
-                        return substring.isEmpty() ? cmd.getName() : substring;
+                    if (substring.startsWith(commands.getName())){
+                        substring = substring.replace(commands.getName(),"");
+                        return substring.isEmpty() ? commands.getName() : substring;
                     }else
                         return "";
                 }
@@ -181,7 +159,7 @@ public abstract class Module implements InterfaceVersions {
             try {
                 connect();
             } catch (Exception e) {
-                try { TimeUnit.SECONDS.sleep(1); } catch (InterruptedException e1) { }
+                try { TimeUnit.SECONDS.sleep(2); } catch (InterruptedException e1) { }
             }
         }
         return "";
@@ -191,20 +169,15 @@ public abstract class Module implements InterfaceVersions {
      * @param cmd Команда.
      * @throws IOException
      */
-    private synchronized void sendCommand(String cmd) throws IOException {
-
+    private void sendCommand(String cmd) throws IOException {
         bufferedWriter.write(cmd);
         bufferedWriter.write("\r");
+        //bufferedWriter.write("\n");
         bufferedWriter.newLine();
         bufferedWriter.flush();
-        /*outputStreamWriter.write(cmd);
-        outputStreamWriter.write("\r");
-        outputStreamWriter.write("\n");
-        outputStreamWriter.flush();*///что этот метод делает?
     }
 
-    /**
-     * Получить bluetooth устройство модуля.
+    /** Получить bluetooth устройство модуля.
      *
      * @return bluetooth устройство.
      */
@@ -212,8 +185,7 @@ public abstract class Module implements InterfaceVersions {
         return device;
     }
 
-    /**
-     * Получить bluetooth адаптер терминала.
+    /** Получить bluetooth адаптер терминала.
      *
      * @return bluetooth адаптер.
      */
@@ -221,8 +193,7 @@ public abstract class Module implements InterfaceVersions {
         return bluetoothAdapter;
     }
 
-    /**
-     * Получаем версию программы из весового модуля
+    /** Получаем версию программы из весового модуля
      *
      * @return Версия весового модуля в текстовом виде.
      * @see Commands#CMD_VERSION
@@ -238,13 +209,20 @@ public abstract class Module implements InterfaceVersions {
         return device.getName();
     }
 
-    /**
-     * Получаем версию hardware весового модуля.
+    /** Получаем версию hardware весового модуля.
      *
      * @return Hardware версия весового модуля.
      * @see Commands#CMD_HARDWARE
      */
     public String getModuleHardware() {
         return Commands.CMD_HARDWARE.getParam();
+    }
+
+    /** Установить мощьность передатчика.
+     * @param power
+     * @return
+     */
+    public boolean setModulePower(int power) {
+        return Commands.CMD_POWER.setParam(power);
     }
 }
