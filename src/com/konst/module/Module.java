@@ -3,12 +3,18 @@ package com.konst.module;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.os.CountDownTimer;
 import android.os.Handler;
 
 import java.io.BufferedWriter;
 import java.io.*;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Весовой модуль
@@ -23,6 +29,7 @@ public abstract class Module implements InterfaceVersions {
     final UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     protected BluetoothSocket socket;
     protected BufferedReader bufferedReader;
+    private Timer commandTimeout;
     //protected OutputStreamWriter outputStreamWriter;
     //protected InputStreamReader inputStreamReader;
     protected BufferedWriter bufferedWriter;
@@ -134,20 +141,55 @@ public abstract class Module implements InterfaceVersions {
      *
      * @param commands Команда в текстовом виде. Формат [команда][параметр] параметр может быть пустым.
      *            Если есть парамет то обрабатывается параметр, иначе команда возвращяет параметр.
-     * @return Имя команды или параметр. Если вернулась имя команды то посланый параметр обработан удачно.
+     * @return Имя команды или параметр. Если вернулась имя команды то посланый параметр обработан удачно. while((line = br.readLine()) != null)
      * Если вернулась пустая строка то команда не выполнена.
      * @see InterfaceVersions
      */
     @Override
-    public synchronized String command(Commands commands) {
+    /*public synchronized String command(Commands commands) {
         try {
             sendCommand(commands.toString());
+            String substring;
+            int i = 0;
+            while((substring = bufferedReader.readLine()) != null){
+                Thread.sleep(1L);
+                i++;
+                if (i >= commands.getTimeOut())
+                    break;
+            }
+            if(substring == null)
+                return "";
+            if (substring.startsWith(commands.getName())){
+                substring = substring.replace(commands.getName(),"");
+                return substring.isEmpty() ? commands.getName() : substring;
+            }else
+                return "";
+
+        } catch (Exception ioe) {
+            try {
+                connect();
+            } catch (Exception e) {
+                try { TimeUnit.SECONDS.sleep(2); } catch (InterruptedException e1) { }
+            }
+        }
+        return "";
+    }*/
+    public synchronized String command(Commands commands) {
+        //Timer timer = new Timer();
+        try {
+            //timer.schedule(new TimerProcessCommandTimeout(), commands.getTimeOut(), commands.getTimeOut());
+            startCommandTimeout(commands.getTimeOut());
+            sendCommand(commands.toString());
             for (int i = 0; i < commands.getTimeOut(); ++i) {
+                //condition.await();
                 Thread.sleep(1L);
                 if (bufferedReader.ready()) {
                     String substring = bufferedReader.readLine();
                     if(substring == null)
                         continue;
+                    stopCommandTimeout();
+                    //timer.cancel();
+                    //timer.purge();
                     if (substring.startsWith(commands.getName())){
                         substring = substring.replace(commands.getName(),"");
                         return substring.isEmpty() ? commands.getName() : substring;
@@ -157,19 +199,47 @@ public abstract class Module implements InterfaceVersions {
             }
         } catch (Exception ioe) {
             try {
+                stopCommandTimeout();
                 connect();
             } catch (Exception e) {
                 try { TimeUnit.SECONDS.sleep(2); } catch (InterruptedException e1) { }
             }
         }
+        stopCommandTimeout();
+        //timer.cancel();
+        //timer.purge();
         return "";
+    }
+
+    public void startCommandTimeout(int time){
+        stopCommandTimeout();
+        commandTimeout = new Timer();
+        commandTimeout.schedule(new TimerProcessCommandTimeout(), time, time);
+    }
+
+    public void stopCommandTimeout(){
+        if(commandTimeout != null){
+            commandTimeout.cancel();
+            commandTimeout.purge();
+        }
+    }
+
+    private class TimerProcessCommandTimeout extends TimerTask {
+        @Override
+        public void run() {
+            try {
+                disconnect();
+            } catch (Exception e) {
+                try { TimeUnit.SECONDS.sleep(2); } catch (InterruptedException e1) { }
+            }
+        }
     }
 
     /** Отправить команду.
      * @param cmd Команда.
      * @throws IOException
      */
-    private void sendCommand(String cmd) throws IOException {
+    private synchronized void sendCommand(String cmd) throws IOException {
         bufferedWriter.write(cmd);
         bufferedWriter.write("\r");
         //bufferedWriter.write("\n");

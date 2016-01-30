@@ -3,10 +3,8 @@ package com.konst.module; /**
  */
 
 import android.os.Build;
-import android.os.Handler;
 
 import java.io.*;
-import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
@@ -19,8 +17,10 @@ import java.util.concurrent.TimeUnit;
  * @author Kostya
  */
 public class ScaleModule extends Module {
-    Timer timerWeight;
-    Timer timerBatteryTemperature;
+    //Timer timerWeight;
+    ThreadWeight threadWeight;
+    ThreadBatteryTemperature threadBatteryTemperature;
+    //Timer timerBatteryTemperature;
     protected Versions version;
     /** Процент заряда батареи (0-100%). */
     protected int battery;
@@ -33,6 +33,8 @@ public class ScaleModule extends Module {
     private int numVersion;
     private final String versionName;
 
+    private boolean enableAutoNull = true;
+
     /** Константы результата взвешивания. */
     public enum ResultWeight {
         /** Значение веса неправильное. */
@@ -42,7 +44,7 @@ public class ScaleModule extends Module {
         /** Значение веса в диапазоне лилита взвешивания. */
         WEIGHT_LIMIT,
         /** Значение веса в диапазоне перегрузки. */
-        WEIGHT_MARGIN;
+        WEIGHT_MARGIN
     }
 
     /** Интерфейс события результат вес. */
@@ -92,7 +94,7 @@ public class ScaleModule extends Module {
         stopMeasuringWeight();
         stopMeasuringBatteryTemperature();
         disconnect();
-        version = null;
+        //version = null;
     }
 
     @Override
@@ -106,19 +108,19 @@ public class ScaleModule extends Module {
         bluetoothAdapter.cancelDiscovery();
         socket.connect();
         //outputStreamWriter = new OutputStreamWriter(socket.getOutputStream()/*, "UTF-8"*/);
-        bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()/*, "UTF-8"*/));
-        bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()/*, "UTF-8"*/));
+        bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+        bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
     }
 
     @Override
     public void disconnect() {
         try {
+            if (socket != null)
+                socket.close();
             if(bufferedReader != null)
                 bufferedReader.close();
             if(bufferedWriter != null)
                 bufferedWriter.close();
-            if (socket != null)
-                socket.close();
         } catch (IOException ioe) {
             socket = null;
         }
@@ -179,9 +181,17 @@ public class ScaleModule extends Module {
     /** Прверяем если весовой модуль присоеденен.
      * @return true если было присоединение и загрузка версии весового модуля.
      */
-    public boolean isAttach() {
-        return version != null;
-    }
+    /*public boolean isAttach() {
+        try {
+            boolean c = socket.isConnected();
+            if(c)
+                return c;
+            return c;
+        }catch (Exception e){
+            return false;
+        }
+
+    }*/
 
     /** Определяем после соединения это весовой модуль и какой версии.
      * Проверяем версию указаной при инициализации класса com.kostya.module.ScaleModule.
@@ -534,6 +544,14 @@ public class ScaleModule extends Module {
         return version.getMarginTenzo();
     }
 
+    public boolean isEnableAutoNull() {
+        return enableAutoNull;
+    }
+
+    public void setEnableAutoNull(boolean enableAutoNull) {
+        this.enableAutoNull = enableAutoNull;
+    }
+
     public void load() throws Exception {
         version.load();
     }
@@ -551,7 +569,10 @@ public class ScaleModule extends Module {
     }
 
     public int updateWeight() {
-        return version.updateWeight();
+        try {
+            return version.updateWeight();
+        }catch (Exception e){}
+        return 0;
     }
 
     public boolean setScaleNull() {
@@ -563,31 +584,65 @@ public class ScaleModule extends Module {
     }
 
     public void startMeasuringWeight(WeightCallback weightCallback){
-        stopMeasuringWeight();
+        if(threadWeight != null)
+            if(threadWeight.isAlive())
+                return;
+        threadWeight = new ThreadWeight(weightCallback);
+        //threadWeight.setPriority(Thread.MAX_PRIORITY);
+        //threadAutoWeight.setDaemon(true);
+        threadWeight.start();
+        /*stopMeasuringWeight();
         timerWeight = new Timer();
         if(weightCallback!=null)
-            timerWeight.schedule(new TimerProcessWeightTask(weightCallback), 10, 50);
+            timerWeight.schedule(new TimerProcessWeightTask(weightCallback), 10, 100);*/
     }
 
     public void stopMeasuringWeight(){
-        if(timerWeight != null){
+        if(threadWeight != null){
+            threadWeight.setRunning(false);
+            boolean retry = true;
+            while(retry){
+                try {
+                    threadWeight.cancel();
+                } catch (InterruptedException | NullPointerException e) {}
+                retry = false;
+            }
+        }
+
+        /*if(timerWeight != null){
             timerWeight.cancel();
             timerWeight.purge();
-        }
+        }*/
     }
 
     public void startMeasuringBatteryTemperature(BatteryTemperatureCallback callback){
-        stopMeasuringBatteryTemperature();
+        if(threadBatteryTemperature != null)
+            if(threadBatteryTemperature.isAlive())
+                return;
+        threadBatteryTemperature = new ThreadBatteryTemperature(callback);
+        //threadAutoWeight.setDaemon(true);
+        threadBatteryTemperature.start();
+        /*stopMeasuringBatteryTemperature();
         timerBatteryTemperature = new Timer();
         if(callback!=null)
-            timerBatteryTemperature.schedule(new TimerProcessBatteryTemperatureTask(callback), 10, 2000);
+            timerBatteryTemperature.schedule(new TimerProcessBatteryTemperatureTask(callback), 10, 2000);*/
     }
 
     public void stopMeasuringBatteryTemperature(){
-        if(timerBatteryTemperature != null){
+        if(threadBatteryTemperature != null){
+            threadBatteryTemperature.setRunning(false);
+            boolean retry = true;
+            while(retry){
+                try {
+                    threadBatteryTemperature.cancel();
+                } catch (InterruptedException | NullPointerException e) {}
+                retry = false;
+            }
+        }
+        /*if(timerBatteryTemperature != null){
             timerBatteryTemperature.cancel();
             timerBatteryTemperature.purge();
-        }
+        }*/
     }
 
     /*public void setWeightCallback(WeightCallback weightCallback) {
@@ -603,8 +658,8 @@ public class ScaleModule extends Module {
         autoNull = 0;
     }
 
-    class RunnableScaleAttach implements Runnable{
-        Thread thread;
+    private class RunnableScaleAttach implements Runnable{
+        final Thread thread;
 
         RunnableScaleAttach(){
             connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_START);
@@ -688,10 +743,10 @@ public class ScaleModule extends Module {
 
         /** Запускаем измерение.  */
         public void start(){
-            if(this.thread == null){
-                this.thread = new Thread(this);
+            if(thread == null){
+                thread = new Thread(this);
                 //this.thread.setDaemon(true);
-                this.thread.start();
+                thread.start();
             }
         }
 
@@ -703,18 +758,18 @@ public class ScaleModule extends Module {
             boolean retry = true;
             while(retry){
                 try {
-                    if(this.thread.isAlive()){
+                    if(thread.isAlive()){
                         if(flag)
-                            this.thread.join(timeUpdate * 2);
+                            thread.join(timeUpdate * 2);
                         else
-                            this.thread.interrupt();
+                            thread.interrupt();
                     }
                     retry = false;
                 } catch (NullPointerException | InterruptedException e) {
                     retry = false;
                 }
             }
-            this.thread = null;
+            thread = null;
         }
     }
 
@@ -722,7 +777,7 @@ public class ScaleModule extends Module {
         protected BatteryTemperatureCallback resultMeasuring;
 
         TimerProcessBatteryTemperatureTask(BatteryTemperatureCallback batteryTemperatureCallback){
-            this.resultMeasuring = batteryTemperatureCallback;
+            resultMeasuring = batteryTemperatureCallback;
         }
 
         public void setResultMeasuring(BatteryTemperatureCallback resultMeasuring) {
@@ -733,16 +788,111 @@ public class ScaleModule extends Module {
         public void run() {
             try {
                 resultMeasuring.batteryTemperature(getModuleBatteryCharge(), getModuleTemperature());
-                if (version.weight != Integer.MIN_VALUE && Math.abs(version.weight) < weightError) { //автоноль
-                    autoNull += 1;
-                    if (autoNull > timerNull / InterfaceVersions.DIVIDER_AUTO_NULL) {
-                        setOffsetScale();
+                if (enableAutoNull){
+                    if (version.weight != Integer.MIN_VALUE && Math.abs(version.weight) < weightError) { //автоноль
+                        autoNull += 1;
+                        if (autoNull > timerNull / InterfaceVersions.DIVIDER_AUTO_NULL) {
+                            setOffsetScale();
+                            autoNull = 0;
+                        }
+                    } else {
                         autoNull = 0;
                     }
-                } else {
-                    autoNull = 0;
                 }
+
             }catch (NullPointerException e){}
+        }
+    }
+
+    private class ThreadBatteryTemperature extends Thread{
+        protected final BatteryTemperatureCallback resultMeasuring;
+        private boolean running;
+        private final int PERIOD_UPDATE = 2000;
+
+        ThreadBatteryTemperature(BatteryTemperatureCallback batteryTemperatureCallback){
+            resultMeasuring = batteryTemperatureCallback;
+        }
+
+        @Override
+        public void run() {
+            setRunning(true);
+            while (isRunning()){
+                try {
+                    resultMeasuring.batteryTemperature(getModuleBatteryCharge(), getModuleTemperature());
+                    if (enableAutoNull){
+                        if (version.weight != Integer.MIN_VALUE && Math.abs(version.weight) < weightError) { //автоноль
+                            autoNull += 1;
+                            if (autoNull > timerNull / InterfaceVersions.DIVIDER_AUTO_NULL) {
+                                setOffsetScale();
+                                autoNull = 0;
+                            }
+                        } else {
+                            autoNull = 0;
+                        }
+                    }
+
+                }catch (NullPointerException e){}
+                try { TimeUnit.MILLISECONDS.sleep(PERIOD_UPDATE); } catch (InterruptedException e) {}
+            }
+        }
+
+        public void cancel() throws InterruptedException{
+            join(PERIOD_UPDATE);
+        }
+
+        public boolean isRunning() {
+            return running;
+        }
+
+        public void setRunning(boolean running) {
+            this.running = running;
+        }
+
+    }
+
+    public class ThreadWeight extends Thread{
+        protected final WeightCallback resultMeasuring;
+        private boolean running;
+        private final int PERIOD_UPDATE = 20;
+
+        ThreadWeight(WeightCallback callback){
+            resultMeasuring = callback;
+        }
+
+        @Override
+        public void run() {
+            setRunning(true);
+            while (isRunning()){
+                try{
+                    updateWeight();
+                    ResultWeight msg;
+                    if (version.weight == Integer.MIN_VALUE) {
+                        msg = ResultWeight.WEIGHT_ERROR;
+                    } else {
+                        if (isLimit())
+                            msg = isMargin() ? ResultWeight.WEIGHT_MARGIN : ResultWeight.WEIGHT_LIMIT;
+                        else {
+                            msg = ResultWeight.WEIGHT_NORMAL;
+                        }
+                    }
+                    resultMeasuring.weight(msg, version.weight, getSensorTenzo());
+                }catch (NullPointerException e){}
+
+                try { TimeUnit.MILLISECONDS.sleep(20); } catch (InterruptedException e) {}
+            }
+            running = false;
+        }
+
+        public void cancel() throws InterruptedException{
+            join(PERIOD_UPDATE);
+        }
+
+        public boolean isRunning() {
+            return running;
+        }
+
+        public void setRunning(boolean running) {
+            this.running = running;
         }
     }
 
@@ -794,10 +944,10 @@ public class ScaleModule extends Module {
 
         /** Запускаем измерение. */
         public void start(){
-            if(this.thread == null){
-                this.thread = new Thread(this);
+            if(thread == null){
+                thread = new Thread(this);
                 //this.thread.setDaemon(true);
-                this.thread.start();
+                thread.start();
             }
         }
 
@@ -809,18 +959,18 @@ public class ScaleModule extends Module {
             boolean retry = true;
             while(retry){
                 try {
-                    if(this.thread.isAlive()){
+                    if(thread.isAlive()){
                         if(flag)
-                            this.thread.join(timeUpdate * 2);
+                            thread.join(timeUpdate * 2);
                         else
-                            this.thread.interrupt();
+                            thread.interrupt();
                     }
                     retry = false;
                 } catch (NullPointerException | InterruptedException e) {
                     retry = false;
                 }
             }
-            this.thread = null;
+            thread = null;
         }
     }
 

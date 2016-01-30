@@ -102,7 +102,7 @@ class V1 extends Versions {
 
     protected void parserData(String d) throws Exception {
         StringBuilder dataBuffer = new StringBuilder(d);
-        synchronized (this) {
+        //synchronized (this) {
             dataBuffer.deleteCharAt(0);
             String str = dataBuffer.substring(0, dataBuffer.indexOf(" "));
             coefficientA = Float.valueOf(str);
@@ -118,7 +118,7 @@ class V1 extends Versions {
             if (weightMax <= 0) {
                 weightMax = 1000;
             }
-        }
+        //}
     }
 
     /*@Override

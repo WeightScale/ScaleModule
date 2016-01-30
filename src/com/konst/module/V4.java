@@ -119,7 +119,7 @@ class V4 extends Versions {
         String[] parts = d.split(" ", 0);
         SimpleCommandLineParser data = new SimpleCommandLineParser(parts, "=");
         Iterator<String> iteratorData = data.getKeyIterator();
-        synchronized (this) {
+        //synchronized (this) {
             while (iteratorData.hasNext()) {
                 switch (iteratorData.next()) {
                     case InterfaceVersions.CMD_DATA_CFA:
@@ -141,7 +141,7 @@ class V4 extends Versions {
                     default:
                 }
             }
-        }
+        //}
     }
 
     @Override
