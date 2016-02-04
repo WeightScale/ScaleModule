@@ -1,7 +1,19 @@
-package com.konst.module;
+/*
+ * Copyright (c) 2016. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+ * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
+ * Etiam sed turpis ac ipsum condimentum fringilla. Maecenas magna.
+ * Proin dapibus sapien vel ante. Aliquam erat volutpat. Pellentesque sagittis ligula eget metus.
+ * Vestibulum commodo. Ut rhoncus gravida arcu.
+ */
+
+package com.konst.module.boot;
 
 
+import android.bluetooth.BluetoothDevice;
 import android.os.Build;
+import com.konst.module.Commands;
+import com.konst.module.ConnectResultCallback;
+import com.konst.module.Module;
 
 import java.io.*;
 
@@ -14,7 +26,7 @@ public class BootModule extends Module {
     private InputStreamReader inputStreamReader;
     private OutputStream outputStream;
     public RunnableBootConnect runnableBootConnect;
-    String versionName = "";
+    private String versionName = "";
     /**
      * Константа время задержки для получения байта.
      */
@@ -23,8 +35,18 @@ public class BootModule extends Module {
     /** Конструктор модуля бутлодера.
      * @param version Верситя бутлодера.
      */
-    public BootModule(String version, ConnectResultCallback event)throws Exception{
-        super(event);
+    public BootModule(String version, String address, ConnectResultCallback event)throws Exception{
+        super(address, event);
+        runnableBootConnect = new RunnableBootConnect();
+        versionName = version;
+
+    }
+
+    /** Конструктор модуля бутлодера.
+     * @param version Верситя бутлодера.
+     */
+    public BootModule(String version, BluetoothDevice device, ConnectResultCallback event)throws Exception{
+        super(device, event);
         runnableBootConnect = new RunnableBootConnect();
         versionName = version;
 
@@ -32,8 +54,20 @@ public class BootModule extends Module {
 
     @Override
     public void attach(){
-        connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_START);
+        connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_START, getNameBluetoothDevice().toString());
         new Thread(runnableBootConnect).start();
+    }
+
+    /**
+     * Определяем имя после соединения это бутлоадер модуль.
+     * Указывается имя при инициализации класса com.kostya.module.BootModule.
+     *
+     * @return true Имя совпадает.
+     */
+    @Override
+    public boolean isVersion() {
+        String vrs = getModuleVersion(); //Получаем версию модуля.
+        return vrs.startsWith(versionName);
     }
 
     /**
@@ -55,9 +89,9 @@ public class BootModule extends Module {
         disconnect();
         // Get a BluetoothSocket for a connection with the given BluetoothDevice
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB)
-            socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+            socket = device.createInsecureRfcommSocketToServiceRecord(getUuid());
         else
-            socket = device.createRfcommSocketToServiceRecord(uuid);
+            socket = device.createRfcommSocketToServiceRecord(getUuid());
         bluetoothAdapter.cancelDiscovery();
         socket.connect();
         inputStream = socket.getInputStream();
@@ -147,17 +181,17 @@ public class BootModule extends Module {
         public void run() {
             try {
                 connect();
-                if(isBootloader()){
-                    connectResultCallback.resultConnect(ResultConnect.STATUS_LOAD_OK);
+                if(isVersion()){
+                    connectResultCallback.resultConnect(ResultConnect.STATUS_LOAD_OK, "");
                 }else {
                     disconnect();
-                    connectResultCallback.resultConnect(ResultConnect.STATUS_VERSION_UNKNOWN);
+                    connectResultCallback.resultConnect(ResultConnect.STATUS_VERSION_UNKNOWN, "");
                 }
 
             } catch (IOException e) {
                 connectResultCallback.connectError(ResultError.CONNECT_ERROR, e.getMessage());
             }
-            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_FINISH);
+            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_FINISH, "");
         }
     }
 
@@ -194,17 +228,6 @@ public class BootModule extends Module {
             }
         }
         return 0;
-    }
-
-    /**
-     * Определяем имя после соединения это бутлоадер модуль.
-     * Указывается имя при инициализации класса com.kostya.module.BootModule.
-     *
-     * @return true Имя совпадает.
-     */
-    public boolean isBootloader() {
-        String vrs = getModuleVersion(); //Получаем версию весов
-        return vrs.startsWith(versionName);
     }
 
 }

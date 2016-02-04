@@ -1,8 +1,16 @@
-package com.konst.module; /**
- * Copyright (c) 2015.
+/*
+ * Copyright (c) 2016. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+ * Morbi non lorem porttitor neque feugiat blandit. Ut vitae ipsum eget quam lacinia accumsan.
+ * Etiam sed turpis ac ipsum condimentum fringilla. Maecenas magna.
+ * Proin dapibus sapien vel ante. Aliquam erat volutpat. Pellentesque sagittis ligula eget metus.
+ * Vestibulum commodo. Ut rhoncus gravida arcu.
  */
 
+package com.konst.module.scale;
+
+import android.bluetooth.BluetoothDevice;
 import android.os.Build;
+import com.konst.module.*;
 
 import java.io.*;
 import java.util.TimerTask;
@@ -11,30 +19,57 @@ import java.util.concurrent.TimeUnit;
 /**
  * Главный класс для работы с весовым модулем. Инициализируем в теле программы. В абстрактных методах используем
  * возвращеные результаты после запуска метода {@link ScaleModule#init(String)}.
- * Пример:com.kostya.module.ScaleModule scaleModule = new com.kostya.module.ScaleModule();
- * scaleModule.init("version", "bluetooth");
- *
+ * Пример:
+ * com.kostya.module.ScaleModule scaleModule = new com.kostya.module.ScaleModule("version module");
+ * scaleModule.init("bluetooth device");
  * @author Kostya
  */
 public class ScaleModule extends Module {
-    //Timer timerWeight;
-    ThreadWeight threadWeight;
-    ThreadBatteryTemperature threadBatteryTemperature;
-    //Timer timerBatteryTemperature;
-    protected Versions version;
+    private InterfaceScaleVersion version;
+    private ThreadWeight threadWeight;
+    private ThreadBatteryTemperature threadBatteryTemperature;
     /** Процент заряда батареи (0-100%). */
-    protected int battery;
+    private int battery;
+    /** Температура в целсиях. */
+    private int temperature;
     /** Погрешность веса автоноль. */
     protected int weightError;
-    /** счётчик автообнуления */
+    /** Счётчик автообнуления. */
     private int autoNull;
     /** Время срабатывания авто ноля. */
     protected int timerNull;
+    /** Номер версии программы. */
     private int numVersion;
+    /** Имя версии программы */
     private final String versionName;
-
+    /** АЦП-фильтр (0-15). */
+    private int filterADC;
+    /** Время выключения весов. */
+    private int timeOff;
+    /** Скорость порта. */
+    private int speedPort;
+    /** Имя таблици google disk. */
+    protected String spreadsheet;
+    /** Имя акаунта google.*/
+    protected String username;
+    /** Пароль акаунта google.*/
+    protected String password;
+    /** Номер телефона. */
+    protected String phone;
+    /** Калибровочный коэффициент a. */
+    private float coefficientA;
+    /** Калибровочный коэффициент b. */
+    private float coefficientB;
+    /** Текущее показание датчика веса. */
+    private int sensorTenzo;
+    /** Максимальное показание датчика. */
+    private int limitTenzo;
+    /** Предельный вес взвешивания. */
+    private int weightMargin;
+    /** Делитель для авто ноль. */
+    private final int DIVIDER_AUTO_NULL = 3;
+    /** Флаг использования авто обнуленияю. */
     private boolean enableAutoNull = true;
-
     /** Константы результата взвешивания. */
     public enum ResultWeight {
         /** Значение веса неправильное. */
@@ -47,43 +82,70 @@ public class ScaleModule extends Module {
         WEIGHT_MARGIN
     }
 
-    /** Интерфейс события результат вес. */
+    /** Обратный вызов результата измерения веса. */
     public interface WeightCallback{
         /** Результат веса.
          * @param what Статус веса {@link ResultWeight}
          * @param weight Значение веса в килограммах.
-         * @param sensor Значение тензодатчика.
+         * @param sensor Значение датчика веса.
          */
         void weight(ResultWeight what, int weight, int sensor);
     }
 
-    /** Интерфейс события результат батарея и температура. */
+    /** Обратный вызов результат измерения батареи и температуры модуля. */
     public interface BatteryTemperatureCallback{
+        /** Результат измерения.
+         * @param battery Значение заряда батареи модуля в процентах.
+         * @param temperature Значение температуры модуля в градусах целсия.
+         */
         void batteryTemperature(int battery, int temperature);
     }
 
-    /** Конструктор весового модуля.
-     * @param moduleVersion Имя и номер версии формат [[Имя][Номер]].
+    /** Конструктор класса весового модуля.
+     * @param moduleVersion Имя и номер версии в формате [[Имя][Номер]].
      * @throws Exception Ошибка при создании модуля.
      */
-    public ScaleModule(String moduleVersion) throws Exception {
+    public ScaleModule(String moduleVersion, BluetoothDevice device, ConnectResultCallback event) throws Exception {
+        super(device, event);
         versionName = moduleVersion;
+        attach();
     }
 
     /** Конструктор весового модуля.
-     * @param moduleVersion Имя и номер версии формат [[Имя][Номер]].
+     * @param moduleVersion Имя и номер версии в формате [[Имя][Номер]].
      * @param event Обратный вызов результата соединения с весовым модулем {@link ConnectResultCallback}.
      * @throws Exception Ошибка при создании модуля.
      */
-    public ScaleModule(String moduleVersion, ConnectResultCallback event) throws Exception {
-        super(event);
+    public ScaleModule(String moduleVersion, String bluetoothDevice, ConnectResultCallback event) throws Exception {
+        super(bluetoothDevice, event);
         versionName = moduleVersion;
+        attach();
     }
 
     /** Соединится с модулем. */
     @Override
     public void attach() /*throws InterruptedException*/ {
         new RunnableScaleAttach();
+    }
+
+    /** Определяем после соединения это весовой модуль и какой версии.
+     * Проверяем версию указаной при инициализации класса com.kostya.module.ScaleModule.
+     * @return true - Версия правильная.
+     */
+    @Override
+    public boolean isVersion() {
+        String vrs = getModuleVersion(); //Получаем версию весов
+        if (vrs.startsWith(versionName)) {
+            try {
+                numVersion = Integer.valueOf(vrs.replace(versionName, ""));
+                //setVersion(fetchVersion(numVersion));
+                version = fetchVersion(numVersion);
+            } catch (Exception e) {
+                return false;
+            }
+            return true;
+        }
+        return false;
     }
 
     /** Отсоединение от весового модуля.
@@ -97,14 +159,18 @@ public class ScaleModule extends Module {
         //version = null;
     }
 
+    /** Создание соединения с bluetooth.
+     * @throws IOException
+     * @throws NullPointerException
+     */
     @Override
     public synchronized void connect() throws IOException, NullPointerException {
         disconnect();
         // Get a BluetoothSocket for a connection with the given BluetoothDevice
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB)
-            socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
+            socket = device.createInsecureRfcommSocketToServiceRecord(getUuid());
         else
-            socket = device.createRfcommSocketToServiceRecord(uuid);
+            socket = device.createRfcommSocketToServiceRecord(getUuid());
         bluetoothAdapter.cancelDiscovery();
         socket.connect();
         //outputStreamWriter = new OutputStreamWriter(socket.getOutputStream()/*, "UTF-8"*/);
@@ -112,6 +178,7 @@ public class ScaleModule extends Module {
         bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"));
     }
 
+    /** Разсоединение с bluetooth. */
     @Override
     public void disconnect() {
         try {
@@ -129,25 +196,27 @@ public class ScaleModule extends Module {
         socket = null;
     }
 
+    /** Определяем версию весов.
+     * @param version Имя версии.
+     * @return Экземпляр версии.
+     * @throws Exception
+     */
+    private InterfaceScaleVersion fetchVersion(int version) throws Exception {
+        switch (version) {
+            case 1:
+                return new ScaleVersion1(this);
+            case 4:
+                return new ScaleVersion4(this);
+            default:
+                throw new Exception("illegal version");
+        }
+    }
+
     /** Получаем класс загруженой версии весового модуля.
      * @return класс версии весового модуля.
      */
-    public Versions getVersion() {
+    public InterfaceScaleVersion getVersion() {
         return version;
-    }
-
-    /** Получаем заряд батареи раннее загруженый в процентах.
-     * @return заряд батареи в процентах.
-     */
-    public int getBattery() {
-        return battery;
-    }
-
-    /** Меняем ранне полученое значение заряда батареи весового модуля.
-     * @param battery Заряд батареи в процентах.
-     */
-    public void setBattery(int battery) {
-        this.battery = battery;
     }
 
     /** Получаем значение веса погрешности для расчета атоноль.
@@ -178,55 +247,6 @@ public class ScaleModule extends Module {
         this.timerNull = timerNull;
     }
 
-    /** Прверяем если весовой модуль присоеденен.
-     * @return true если было присоединение и загрузка версии весового модуля.
-     */
-    /*public boolean isAttach() {
-        try {
-            boolean c = socket.isConnected();
-            if(c)
-                return c;
-            return c;
-        }catch (Exception e){
-            return false;
-        }
-
-    }*/
-
-    /** Определяем после соединения это весовой модуль и какой версии.
-     * Проверяем версию указаной при инициализации класса com.kostya.module.ScaleModule.
-     *
-     * @return true версия правильная.
-     */
-    public boolean isScales() {
-        String vrs = getModuleVersion(); //Получаем версию весов
-        if (vrs.startsWith(versionName)) {
-            try {
-                numVersion = Integer.valueOf(vrs.replace(versionName, ""));
-                version = fetchVersion(numVersion);
-            } catch (Exception e) {
-                return false;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    /** Определяем версию весов.
-     * @param version Имя версии.
-     * @return Экземпляр версии.
-     * @throws Exception
-     */
-    private Versions fetchVersion(int version) throws Exception {
-        switch (version) {
-            case 1:
-                return new V1(this);
-            case 4:
-                return new V4(this);
-            default:
-                throw new Exception("illegal version");
-        }
-    }
 
     //==================================================================================================================
 
@@ -249,23 +269,40 @@ public class ScaleModule extends Module {
         //return cmd(InterfaceVersions.CMD_SERVICE_COD);
     }
 
+    public int getNumVersion() { return numVersion; }
+
+    public String getAddressBluetoothDevice() { return getDevice().getAddress(); }
+
+    public String getUserName() { return username; }
+
+    public int getMarginTenzo() { return getVersion().getMarginTenzo(); }
+
+    public int getLimitTenzo(){ return limitTenzo; }
+
+    public int getWeightMax(){ return getVersion().getWeightMax(); }
+
+    public int getTemperature() {return temperature; }
+
     /** Установливаем новое значение АЦП в весовом модуле. Знчение от1 до 15.
      * @param filterADC Значение АЦП от 1 до 15.
      * @return true Значение установлено.
      * @see Commands#CMD_FILTER
      */
     public boolean setModuleFilterADC(int filterADC) {
-        return Commands.CMD_FILTER.setParam(filterADC);
-        //return cmd(InterfaceVersions.CMD_FILTER + filterADC).equals(InterfaceVersions.CMD_FILTER);
+        if(Commands.CMD_FILTER.setParam(filterADC)){
+            this.filterADC = filterADC;
+            return true;
+        }
+        return false;
     }
 
     /** Получаем из весового модуля время выключения при бездействии устройства.
      * @return время в минутах.
      * @see Commands#CMD_TIMER
      */
-    public String getModuleTimeOff() {
+    /*public String getModuleTimeOff() {
         return Commands.CMD_TIMER.getParam();
-    }
+    }*/
 
     /** Записываем в весовой модуль время бездействия устройства.
      * По истечению времени модуль выключается.
@@ -274,7 +311,11 @@ public class ScaleModule extends Module {
      * @see Commands#CMD_TIMER
      */
     public boolean setModuleTimeOff(int timeOff) {
-        return Commands.CMD_TIMER.setParam(timeOff);
+        if(Commands.CMD_TIMER.setParam(timeOff)){
+            this.timeOff = timeOff;
+            return true;
+        }
+        return false;
     }
 
     /** Получаем значение скорости порта bluetooth модуля обмена данными.
@@ -328,7 +369,7 @@ public class ScaleModule extends Module {
      * @return Заряд батареи в процентах.
      * @see Commands#CMD_BATTERY
      */
-    public int getModuleBatteryCharge() {
+    private int getModuleBatteryCharge() {
         try {
             battery = Integer.valueOf(Commands.CMD_BATTERY.getParam());
         } catch (Exception e) {
@@ -344,14 +385,18 @@ public class ScaleModule extends Module {
      * @see Commands#CMD_CALL_BATTERY
      */
     public boolean setModuleBatteryCharge(int charge) {
-        return Commands.CMD_CALL_BATTERY.setParam(charge);
+        if(Commands.CMD_CALL_BATTERY.setParam(charge)){
+            battery = charge;
+            return true;
+        }
+        return false;
     }
 
     /** Получаем значение температуры весового модуля.
      * @return Температура в градусах.
      * @see Commands#CMD_DATA_TEMP
      */
-    public int getModuleTemperature() {
+    private int getModuleTemperature() {
         try {
             return (int) ((float) ((Integer.valueOf(Commands.CMD_DATA_TEMP.getParam()) - 0x800000) / 7169) / 0.81) - 273;
         } catch (Exception e) {
@@ -364,9 +409,7 @@ public class ScaleModule extends Module {
      * @return true - Имя записано в модуль.
      * @see Commands#CMD_NAME
      */
-    public boolean setModuleName(String name) {
-        return Commands.CMD_NAME.setParam(name);
-    }
+    public boolean setModuleName(String name) { return Commands.CMD_NAME.setParam(name);}
 
     /** Устанавливаем калибровку батареи.
      * @param percent Значение калибровки в процентах.
@@ -377,168 +420,192 @@ public class ScaleModule extends Module {
         return Commands.CMD_CALL_BATTERY.setParam(percent);
     }
 
-    /** Устанавливаем имя spreadsheet в google drive.
-     * @param sheet Имя таблици.
-     * @return true - Имя записано успешно.
-     * @see Versions#setSpreadsheet(String)
+    /**Установить обнуление.
+     * @return true - Обнуление установлено.
      */
-    public boolean setModuleSpreadsheet(String sheet) {
-        return version.setSpreadsheet(sheet);
+    public synchronized boolean setOffsetScale() { //обнуление
+        return Commands.CMD_SET_OFFSET.getParam().equals(Commands.CMD_SET_OFFSET.getName());
     }
 
-    /** Устанавливаем имя аккаунта в google.
+    /** Устанавливаем имя spreadsheet google drive в модуле.
+     * @param sheet Имя таблици.
+     * @return true - Имя записано успешно.
+     */
+    public boolean setModuleSpreadsheet(String sheet) {
+        if (Commands.CMD_SPREADSHEET.setParam(sheet)){
+            spreadsheet = sheet;
+            return true;
+        }
+        return false;
+    }
+
+    /** Устанавливаем имя аккаунта google в модуле.
      * @param username Имя аккаунта.
      * @return true - Имя записано успешно.
-     * @see Versions#setUsername(String)
      */
     public boolean setModuleUserName(String username) {
-        return version.setUsername(username);
+        if (Commands.CMD_G_USER.setParam(username)){
+            this.username = username;
+            return true;
+        }
+        return false;
     }
 
     /** Устанавливаем пароль в google.
      * @param password Пароль аккаунта.
      * @return true - Пароль записано успешно.
-     * @see Versions#setPassword(String)
      */
     public boolean setModulePassword(String password) {
-        return version.setPassword(password);
+        if (Commands.CMD_G_PASS.setParam(password)){
+            this.password = password;
+            return true;
+        }
+        return false;
     }
 
     /** Устанавливаем номер телефона. Формат "+38хххххххххх".
-     * @param phone Пароль аккаунта.
+     * @param phone Номер телефона.
      * @return true - телефон записано успешно.
-     * @see Versions#setPhone(String)
      */
     public boolean setModulePhone(String phone) {
-        return version.setPhone(phone);
+        if(Commands.CMD_PHONE.setParam(phone)){
+            this.phone = phone;
+            return true;
+        }
+        return false;
     }
 
     /** Выключить питание модуля.
-     * @return true - питание выключено.
+     * @return true - питание модкля выключено.
      */
-    public boolean setModulePowerOff() {
-        return version.powerOff();
+    public boolean powerOff() {
+        return Commands.CMD_POWER_OFF.getParam().equals(Commands.CMD_POWER_OFF.getName());
     }
 
     /** Получить сохраненое значение фильтраАЦП.
      * @return Значение фильтра от 1 до 15.
-     * @see Versions#filterADC
      */
     public int getFilterADC() {
-        return version.filterADC;
+        return filterADC;
     }
 
     /** Установить значение фильтра АЦП.
-     * @param filterADC Значение АЦП.
-     * @see Versions#filterADC
-     */
+     * @param filterADC Значение АЦП.*/
     public void setFilterADC(int filterADC) {
-        version.filterADC = filterADC;
+        this.filterADC = filterADC;
     }
 
-    public int getWeightMax() {
+    /*public int getWeightMax() {
         return version.weightMax;
-    }
+    }*/
 
     public void setWeightMax(int weightMax) {
-        version.weightMax = weightMax;
+        getVersion().setWeightMax(weightMax);
     }
 
-    public int getLimitTenzo() {
-        return version.limitTenzo;
-    }
-
-    public void setLimitTenzo(int limitTenzo) {
-        version.limitTenzo = limitTenzo;
-    }
-
-    public String getPhone() {
-        return version.phone;
-    }
-
-    public void setPhone(String phone) {
-        version.phone = phone;
-    }
-
-    public int getTimeOff() {
-        return version.timeOff;
-    }
-
-    public void setTimeOff(int timeOff) {
-        version.timeOff = timeOff;
-    }
-
-    public float getCoefficientA() {
-        return version.coefficientA;
-    }
+    public float getCoefficientA() { return coefficientA; }
 
     public void setCoefficientA(float coefficientA) {
-        version.coefficientA = coefficientA;
+        this.coefficientA = coefficientA;
     }
 
     public float getCoefficientB() {
-        return version.coefficientB;
+        return coefficientB;
     }
 
     public void setCoefficientB(float coefficientB) {
-        version.coefficientB = coefficientB;
+        this.coefficientB = coefficientB;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    /*public int getLimitTenzo() {
+        return version.limitTenzo;
+    }*/
+
+    public void setLimitTenzo(int limitTenzo) {
+        this.limitTenzo = limitTenzo;
+    }
+
+    public int getTimeOff() {
+        return timeOff;
+    }
+
+    public void setTimeOff(int timeOff) {
+        this.timeOff = timeOff;
     }
 
     public String getSpreadSheet() {
-        return version.spreadsheet;
+        return spreadsheet;
     }
+
+    public void setSensorTenzo(int sensorTenzo) {
+        this.sensorTenzo = sensorTenzo;
+    }
+
+    public int getSensorTenzo() {
+        return sensorTenzo;
+    }
+
+    public int getWeightMargin() {
+        return weightMargin;
+    }
+
+    public void setWeightMargin(int weightMargin) {
+        this.weightMargin = weightMargin;
+    }
+
+    public int getSpeedPort() {
+        return speedPort;
+    }
+
+    public void setSpeedPort(int speedPort) {
+        this.speedPort = speedPort;
+    }
+
+    /*public void setPhone(String phone) {
+        version.phone = phone;
+    }
+
+
 
     public void setSpreadSheet(String spreadSheet) {
         version.spreadsheet = spreadSheet;
     }
 
-    public String getUserName() {
-        return version.username;
-    }
+
 
     public void setUserName(String userName) {
         version.username = userName;
     }
 
-    public String getPassword() {
-        return version.password;
-    }
+
 
     public void setPassword(String password) {
         version.password = password;
     }
 
-    public int getSensorTenzo() {
-        return version.getSensorTenzo();
-    }
 
-    public void setSensorTenzo(int sensorTenzo) {
-        version.sensorTenzo = sensorTenzo;
-    }
 
-    public int getWeightMargin() {
-        return version.weightMargin;
-    }
 
-    public void setWeightMargin(int weightMargin) {
-        version.weightMargin = weightMargin;
-    }
 
-    public int getNumVersion() {
-        return numVersion;
-    }
+
+
+
 
     public void setNumVersion(int version) {
         numVersion = version;
     }
 
-    public int getSpeedPort() {
-        return version.getSpeedPort();
-    }
 
-    public String getAddressBluetoothDevice() {
-        return getDevice().getAddress();
-    }
+
+
 
     public int getMarginTenzo() {
         return version.getMarginTenzo();
@@ -546,17 +613,69 @@ public class ScaleModule extends Module {
 
     public boolean isEnableAutoNull() {
         return enableAutoNull;
+    }*/
+
+    public void setEnableAutoNull(boolean enableAutoNull) {this.enableAutoNull = enableAutoNull;}
+
+    public void startMeasuringWeight(WeightCallback weightCallback){
+        if(threadWeight != null)
+            if(threadWeight.isAlive()){
+                threadWeight.setResultMeasuring(weightCallback);
+                return;
+            }
+
+        threadWeight = new ThreadWeight(weightCallback);
+        //threadWeight.setPriority(Thread.MAX_PRIORITY);
+        //threadAutoWeight.setDaemon(true);
+        threadWeight.start();
     }
 
-    public void setEnableAutoNull(boolean enableAutoNull) {
-        this.enableAutoNull = enableAutoNull;
+    public void stopMeasuringWeight(){
+        if(threadWeight != null){
+            threadWeight.setRunning(false);
+            boolean retry = true;
+            while(retry){
+                try {
+                    threadWeight.cancel();
+                } catch (InterruptedException | NullPointerException e) {}
+                retry = false;
+            }
+        }
     }
 
-    public void load() throws Exception {
+    public void startMeasuringBatteryTemperature(BatteryTemperatureCallback callback){
+        if(threadBatteryTemperature != null)
+            if(threadBatteryTemperature.isAlive()){
+                threadBatteryTemperature.setResultMeasuring(callback);
+                return;
+            }
+        threadBatteryTemperature = new ThreadBatteryTemperature(callback);
+        //threadAutoWeight.setDaemon(true);
+        threadBatteryTemperature.start();
+    }
+
+    public void stopMeasuringBatteryTemperature(){
+        if(threadBatteryTemperature != null){
+            threadBatteryTemperature.setRunning(false);
+            boolean retry = true;
+            while(retry){
+                try {
+                    threadBatteryTemperature.cancel();
+                } catch (InterruptedException | NullPointerException e) {}
+                retry = false;
+            }
+        }
+    }
+
+    public boolean writeData() {
+        return getVersion().writeData();
+    }
+
+    /*public void load() throws Exception {
         version.load();
-    }
+    }*/
 
-    public boolean setOffsetScale() {
+    /*public boolean setOffsetScale() {
         return version.setOffsetScale();
     }
 
@@ -579,71 +698,9 @@ public class ScaleModule extends Module {
         return version.setScaleNull();
     }
 
-    public boolean writeData() {
-        return version.writeData();
-    }
 
-    public void startMeasuringWeight(WeightCallback weightCallback){
-        if(threadWeight != null)
-            if(threadWeight.isAlive())
-                return;
-        threadWeight = new ThreadWeight(weightCallback);
-        //threadWeight.setPriority(Thread.MAX_PRIORITY);
-        //threadAutoWeight.setDaemon(true);
-        threadWeight.start();
-        /*stopMeasuringWeight();
-        timerWeight = new Timer();
-        if(weightCallback!=null)
-            timerWeight.schedule(new TimerProcessWeightTask(weightCallback), 10, 100);*/
-    }
 
-    public void stopMeasuringWeight(){
-        if(threadWeight != null){
-            threadWeight.setRunning(false);
-            boolean retry = true;
-            while(retry){
-                try {
-                    threadWeight.cancel();
-                } catch (InterruptedException | NullPointerException e) {}
-                retry = false;
-            }
-        }
 
-        /*if(timerWeight != null){
-            timerWeight.cancel();
-            timerWeight.purge();
-        }*/
-    }
-
-    public void startMeasuringBatteryTemperature(BatteryTemperatureCallback callback){
-        if(threadBatteryTemperature != null)
-            if(threadBatteryTemperature.isAlive())
-                return;
-        threadBatteryTemperature = new ThreadBatteryTemperature(callback);
-        //threadAutoWeight.setDaemon(true);
-        threadBatteryTemperature.start();
-        /*stopMeasuringBatteryTemperature();
-        timerBatteryTemperature = new Timer();
-        if(callback!=null)
-            timerBatteryTemperature.schedule(new TimerProcessBatteryTemperatureTask(callback), 10, 2000);*/
-    }
-
-    public void stopMeasuringBatteryTemperature(){
-        if(threadBatteryTemperature != null){
-            threadBatteryTemperature.setRunning(false);
-            boolean retry = true;
-            while(retry){
-                try {
-                    threadBatteryTemperature.cancel();
-                } catch (InterruptedException | NullPointerException e) {}
-                retry = false;
-            }
-        }
-        /*if(timerBatteryTemperature != null){
-            timerBatteryTemperature.cancel();
-            timerBatteryTemperature.purge();
-        }*/
-    }
 
     /*public void setWeightCallback(WeightCallback weightCallback) {
         processWeight.setResultMeasuring(weightCallback);
@@ -654,15 +711,13 @@ public class ScaleModule extends Module {
         timerProcessBatteryTemperatureTask.setResultMeasuring(batteryTemperatureCallback);
     }*/
 
-    public void resetAutoNull(){
-        autoNull = 0;
-    }
+    public void resetAutoNull(){ autoNull = 0; }
 
     private class RunnableScaleAttach implements Runnable{
         final Thread thread;
 
         RunnableScaleAttach(){
-            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_START);
+            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_START, getNameBluetoothDevice().toString());
             thread = new Thread(this);
             thread.start();
         }
@@ -671,43 +726,141 @@ public class ScaleModule extends Module {
         public void run() {
             try {
                 connect();
-                if (isScales()) {
+                if (isVersion()) {
                     try {
-                        load();
-                        connectResultCallback.resultConnect(ResultConnect.STATUS_LOAD_OK);
-                    } catch (Versions.ErrorModuleException e) {
+                        getVersion().load();
+                        connectResultCallback.resultConnect(ResultConnect.STATUS_LOAD_OK, "");
+                    } catch (ErrorModuleException e) {
                         connectResultCallback.connectError(ResultError.MODULE_ERROR, e.getMessage());
-                    } catch (Versions.ErrorTerminalException e) {
+                    } catch (ErrorTerminalException e) {
                         connectResultCallback.connectError(ResultError.TERMINAL_ERROR, e.getMessage());
                     } catch (Exception e) {
                         connectResultCallback.connectError(ResultError.MODULE_ERROR, e.getMessage());
                     }
                 } else {
                     disconnect();
-                    connectResultCallback.resultConnect(ResultConnect.STATUS_VERSION_UNKNOWN);
+                    connectResultCallback.resultConnect(ResultConnect.STATUS_VERSION_UNKNOWN, "");
                 }
             } catch (IOException e) {
                 connectResultCallback.connectError(ResultError.CONNECT_ERROR, e.getMessage());
             }
-            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_FINISH);
+            connectResultCallback.resultConnect(ResultConnect.STATUS_ATTACH_FINISH, "");
+        }
+    }
+
+    private class ThreadBatteryTemperature extends Thread{
+        protected BatteryTemperatureCallback resultMeasuring;
+        private boolean running;
+        private final int PERIOD_UPDATE = 2000;
+
+        ThreadBatteryTemperature(BatteryTemperatureCallback batteryTemperatureCallback){
+            resultMeasuring = batteryTemperatureCallback;
+        }
+
+        @Override
+        public void run() {
+            setRunning(true);
+            while (isRunning()){
+                try {
+                    resultMeasuring.batteryTemperature(getModuleBatteryCharge(), getModuleTemperature());
+                    if (enableAutoNull){
+                        if (getVersion().getWeight() != Integer.MIN_VALUE && Math.abs(getVersion().getWeight()) < weightError) { //автоноль
+                            autoNull += 1;
+                            if (autoNull > timerNull / DIVIDER_AUTO_NULL) {
+                                setOffsetScale();
+                                autoNull = 0;
+                            }
+                        } else {
+                            autoNull = 0;
+                        }
+                    }
+
+                }catch (Exception e){}
+                try { TimeUnit.MILLISECONDS.sleep(PERIOD_UPDATE); } catch (InterruptedException e) {}
+            }
+        }
+
+        public void cancel() throws InterruptedException{
+            join(PERIOD_UPDATE);
+        }
+
+        public boolean isRunning() {
+            return running;
+        }
+
+        public void setRunning(boolean running) {
+            this.running = running;
+        }
+
+        public void setResultMeasuring(BatteryTemperatureCallback resultMeasuring) {this.resultMeasuring = resultMeasuring;}
+    }
+
+    private class ThreadWeight extends Thread{
+        protected WeightCallback resultMeasuring;
+        private boolean running;
+        private final int PERIOD_UPDATE = 20;
+
+        ThreadWeight(WeightCallback callback){
+            resultMeasuring = callback;
+        }
+
+        @Override
+        public void run() {
+            setRunning(true);
+            while (isRunning()){
+                try{
+                    int weight = getVersion().updateWeight();
+                    setSensorTenzo(Integer.valueOf(Commands.CMD_SENSOR.getParam()));
+                    ResultWeight msg;
+                    if (weight == Integer.MIN_VALUE) {
+                        msg = ResultWeight.WEIGHT_ERROR;
+                    } else {
+                        if (getVersion().isLimit())
+                            msg = getVersion().isMargin() ? ResultWeight.WEIGHT_MARGIN : ResultWeight.WEIGHT_LIMIT;
+                        else {
+                            msg = ResultWeight.WEIGHT_NORMAL;
+                        }
+                    }
+                    resultMeasuring.weight(msg, weight, getSensorTenzo());
+                }catch (Exception e){}
+
+                try { TimeUnit.MILLISECONDS.sleep(20); } catch (InterruptedException e) {}
+            }
+            running = false;
+        }
+
+        public void cancel() throws InterruptedException{
+            join(PERIOD_UPDATE);
+        }
+
+        public boolean isRunning() {
+            return running;
+        }
+
+        public void setRunning(boolean running) {
+            this.running = running;
+        }
+
+        public void setResultMeasuring(WeightCallback resultMeasuring) {
+            this.resultMeasuring = resultMeasuring;
         }
     }
 
     /** Класс для обработки показаний батареи и температуры. */
-    private abstract class ProcessBatteryTemperature implements Runnable{
+    /*private abstract class ProcessBatteryTemperature implements Runnable{
         private Thread thread;
         protected BatteryTemperatureCallback resultMeasuring;
         private volatile boolean cancelled;
-        /** счётчик автообнуления */
+        *//** счётчик автообнуления *//*
         private int autoNull;
-        /** Время обновления в милисекундах. */
+        *//** Время обновления в милисекундах. *//*
         private int timeUpdate = 1000;
 
-        /** Метод посылает значения веса и датчика.
+        *//** Метод посылает значения веса и датчика.
          * @param battery     результат заряд батареи в процентах.
          * @param temperature результат температуры в градусах.
          * @return возвращяет время для обновления показаний в секундах.
-         */
+         *//*
         public abstract int onEvent(int battery, int temperature);
 
         public void setResultMeasuring(BatteryTemperatureCallback resultMeasuring) {
@@ -738,10 +891,10 @@ public class ScaleModule extends Module {
 
         private synchronized void cancel() {  cancelled = true;  }
 
-        /** Сброс счетчика авто ноль. */
+        *//** Сброс счетчика авто ноль. *//*
         private void resetNull() { autoNull = 0; }
 
-        /** Запускаем измерение.  */
+        *//** Запускаем измерение.  *//*
         public void start(){
             if(thread == null){
                 thread = new Thread(this);
@@ -750,9 +903,9 @@ public class ScaleModule extends Module {
             }
         }
 
-        /** Останавливаем измерение.
+        *//** Останавливаем измерение.
          * @param flag true - ждем остановки измерения.
-         */
+         *//*
         public void stop(boolean flag){
             cancelled = true;
             boolean retry = true;
@@ -771,9 +924,9 @@ public class ScaleModule extends Module {
             }
             thread = null;
         }
-    }
+    }*/
 
-    private class TimerProcessBatteryTemperatureTask extends TimerTask{
+    /*private class TimerProcessBatteryTemperatureTask extends TimerTask{
         protected BatteryTemperatureCallback resultMeasuring;
 
         TimerProcessBatteryTemperatureTask(BatteryTemperatureCallback batteryTemperatureCallback){
@@ -802,114 +955,22 @@ public class ScaleModule extends Module {
 
             }catch (NullPointerException e){}
         }
-    }
-
-    private class ThreadBatteryTemperature extends Thread{
-        protected final BatteryTemperatureCallback resultMeasuring;
-        private boolean running;
-        private final int PERIOD_UPDATE = 2000;
-
-        ThreadBatteryTemperature(BatteryTemperatureCallback batteryTemperatureCallback){
-            resultMeasuring = batteryTemperatureCallback;
-        }
-
-        @Override
-        public void run() {
-            setRunning(true);
-            while (isRunning()){
-                try {
-                    resultMeasuring.batteryTemperature(getModuleBatteryCharge(), getModuleTemperature());
-                    if (enableAutoNull){
-                        if (version.weight != Integer.MIN_VALUE && Math.abs(version.weight) < weightError) { //автоноль
-                            autoNull += 1;
-                            if (autoNull > timerNull / InterfaceVersions.DIVIDER_AUTO_NULL) {
-                                setOffsetScale();
-                                autoNull = 0;
-                            }
-                        } else {
-                            autoNull = 0;
-                        }
-                    }
-
-                }catch (NullPointerException e){}
-                try { TimeUnit.MILLISECONDS.sleep(PERIOD_UPDATE); } catch (InterruptedException e) {}
-            }
-        }
-
-        public void cancel() throws InterruptedException{
-            join(PERIOD_UPDATE);
-        }
-
-        public boolean isRunning() {
-            return running;
-        }
-
-        public void setRunning(boolean running) {
-            this.running = running;
-        }
-
-    }
-
-    public class ThreadWeight extends Thread{
-        protected final WeightCallback resultMeasuring;
-        private boolean running;
-        private final int PERIOD_UPDATE = 20;
-
-        ThreadWeight(WeightCallback callback){
-            resultMeasuring = callback;
-        }
-
-        @Override
-        public void run() {
-            setRunning(true);
-            while (isRunning()){
-                try{
-                    updateWeight();
-                    ResultWeight msg;
-                    if (version.weight == Integer.MIN_VALUE) {
-                        msg = ResultWeight.WEIGHT_ERROR;
-                    } else {
-                        if (isLimit())
-                            msg = isMargin() ? ResultWeight.WEIGHT_MARGIN : ResultWeight.WEIGHT_LIMIT;
-                        else {
-                            msg = ResultWeight.WEIGHT_NORMAL;
-                        }
-                    }
-                    resultMeasuring.weight(msg, version.weight, getSensorTenzo());
-                }catch (NullPointerException e){}
-
-                try { TimeUnit.MILLISECONDS.sleep(20); } catch (InterruptedException e) {}
-            }
-            running = false;
-        }
-
-        public void cancel() throws InterruptedException{
-            join(PERIOD_UPDATE);
-        }
-
-        public boolean isRunning() {
-            return running;
-        }
-
-        public void setRunning(boolean running) {
-            this.running = running;
-        }
-    }
+    }*/
 
     /** Класс обработки показаний веса и значения датчика. */
-    private abstract class ProcessWeight implements Runnable{
+    /*private abstract class ProcessWeight implements Runnable{
         private Thread thread;
         protected WeightCallback resultMeasuring;
         private volatile boolean cancelled;
-        /** Время обновления в милисекундах. */
+        *//** Время обновления в милисекундах. *//*
         private int timeUpdate = 50;
 
-        /** Метод возвращяет значения веса и датчика.
+        *//** Метод возвращяет значения веса и датчика.
          * @param what   результат статуса измерения enum ResultWeight.
          * @param weight результат веса.
          * @param sensor результат показаний датчика веса.
          * @return возвращяет время для обновления показаний в милисикундах.
-         */
+         *//*
         public abstract int onEvent(ResultWeight what, int weight, int sensor);
 
         public void setResultMeasuring(WeightCallback resultMeasuring) {
@@ -942,7 +1003,7 @@ public class ScaleModule extends Module {
             cancelled = true;
         }
 
-        /** Запускаем измерение. */
+        *//** Запускаем измерение. *//*
         public void start(){
             if(thread == null){
                 thread = new Thread(this);
@@ -951,9 +1012,9 @@ public class ScaleModule extends Module {
             }
         }
 
-        /** Останавливаем измерение.
+        *//** Останавливаем измерение.
          * @param flag true - ждем остановки измерения.
-         */
+         *//*
         public void stop(boolean flag){
             cancelled = true;
             boolean retry = true;
@@ -972,10 +1033,10 @@ public class ScaleModule extends Module {
             }
             thread = null;
         }
-    }
+    }*/
 
     /** Класс задачи для таймера обрвботки показаний веса и значения датчика. */
-    private class TimerProcessWeightTask extends TimerTask {
+    /*private class TimerProcessWeightTask extends TimerTask {
         protected WeightCallback resultMeasuring;
 
         TimerProcessWeightTask(WeightCallback weightCallback){
@@ -1003,5 +1064,5 @@ public class ScaleModule extends Module {
                 resultMeasuring.weight(msg, version.weight, getSensorTenzo());
             }catch (NullPointerException e){}
         }
-    }
+    }*/
 }

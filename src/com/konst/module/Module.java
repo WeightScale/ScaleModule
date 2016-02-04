@@ -3,8 +3,8 @@ package com.konst.module;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.os.CountDownTimer;
 import android.os.Handler;
+import com.konst.module.scale.ScaleModule;
 
 import java.io.BufferedWriter;
 import java.io.*;
@@ -12,9 +12,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Весовой модуль
@@ -26,15 +23,12 @@ public abstract class Module implements InterfaceVersions {
     protected BluetoothDevice device;
     /** Bluetooth адаптер терминала. */
     protected final BluetoothAdapter bluetoothAdapter;
-    final UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private final UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     protected BluetoothSocket socket;
     protected BufferedReader bufferedReader;
     private Timer commandTimeout;
-    //protected OutputStreamWriter outputStreamWriter;
-    //protected InputStreamReader inputStreamReader;
     protected BufferedWriter bufferedWriter;
-    ConnectResultCallback connectResultCallback;
-    //Handler handlerConnect;
+    protected ConnectResultCallback connectResultCallback;
 
     /** Константы результат соединения.  */
     public enum ResultConnect {
@@ -60,6 +54,7 @@ public abstract class Module implements InterfaceVersions {
 
     public abstract void dettach();
     public abstract void attach() throws InterruptedException;
+    public abstract boolean isVersion();
 
     /** Получаем соединение с bluetooth весовым модулем.
      * @throws IOException
@@ -70,10 +65,10 @@ public abstract class Module implements InterfaceVersions {
     /** Получаем разьединение с bluetooth весовым модулем. */
     public abstract void disconnect();
 
-    boolean flagTimeout;
-    final Handler handler = new Handler();
+    private boolean flagTimeout;
+    private final Handler handler = new Handler();
 
-    protected Module() throws Exception{
+    /*protected Module() throws Exception{
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
             throw new Exception("Bluetooth adapter missing");
@@ -86,13 +81,13 @@ public abstract class Module implements InterfaceVersions {
                     flagTimeout = true;
             }
         }, 5000);
-        while (!bluetoothAdapter.isEnabled() && !flagTimeout) ; /* ждем включения bluetooth */
+        while (!bluetoothAdapter.isEnabled() && !flagTimeout) ; *//* ждем включения bluetooth *//*
         if(flagTimeout)
             throw new Exception("Timeout enabled bluetooth");
         Commands.setInterfaceCommand(this);
-    }
+    }*/
 
-    protected Module(ConnectResultCallback event) throws Exception{
+    protected Module(BluetoothDevice device, ConnectResultCallback event)throws Exception{
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(bluetoothAdapter == null)
             throw new Exception("Bluetooth adapter missing");
@@ -108,6 +103,28 @@ public abstract class Module implements InterfaceVersions {
         while (!bluetoothAdapter.isEnabled() && !flagTimeout) ;//ждем включения bluetooth
         if(flagTimeout)
             throw new Exception("Timeout enabled bluetooth");
+        init(device);
+        connectResultCallback = event;
+        Commands.setInterfaceCommand(this);
+    }
+
+    protected Module(String device, ConnectResultCallback event) throws Exception{
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if(bluetoothAdapter == null)
+            throw new Exception("Bluetooth adapter missing");
+        bluetoothAdapter.enable();
+
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!bluetoothAdapter.isEnabled())
+                    flagTimeout = true;
+            }
+        }, 5000);
+        while (!bluetoothAdapter.isEnabled() && !flagTimeout) ;//ждем включения bluetooth
+        if(flagTimeout)
+            throw new Exception("Timeout enabled bluetooth");
+        init(device);
         connectResultCallback = event;
         Commands.setInterfaceCommand(this);
     }
@@ -121,7 +138,7 @@ public abstract class Module implements InterfaceVersions {
      * Для соединения {@link ScaleModule#attach()}
      * @param device bluetooth устройство.
      */
-    public void init( BluetoothDevice device) throws Exception{
+    private void init( BluetoothDevice device) throws Exception{
         if(device == null)
             throw new Exception("Bluetooth device is null ");
         this.device = device;
@@ -133,7 +150,7 @@ public abstract class Module implements InterfaceVersions {
      * @throws NullPointerException
      * @throws IllegalArgumentException
      */
-    public void init(String address) throws Exception{
+    private void init(String address) throws Exception{
         device = bluetoothAdapter.getRemoteDevice(address);
     }
 
@@ -146,41 +163,14 @@ public abstract class Module implements InterfaceVersions {
      * @see InterfaceVersions
      */
     @Override
-    /*public synchronized String command(Commands commands) {
-        try {
-            sendCommand(commands.toString());
-            String substring;
-            int i = 0;
-            while((substring = bufferedReader.readLine()) != null){
-                Thread.sleep(1L);
-                i++;
-                if (i >= commands.getTimeOut())
-                    break;
-            }
-            if(substring == null)
-                return "";
-            if (substring.startsWith(commands.getName())){
-                substring = substring.replace(commands.getName(),"");
-                return substring.isEmpty() ? commands.getName() : substring;
-            }else
-                return "";
-
-        } catch (Exception ioe) {
-            try {
-                connect();
-            } catch (Exception e) {
-                try { TimeUnit.SECONDS.sleep(2); } catch (InterruptedException e1) { }
-            }
-        }
-        return "";
-    }*/
     public synchronized String command(Commands commands) {
         //Timer timer = new Timer();
         try {
             //timer.schedule(new TimerProcessCommandTimeout(), commands.getTimeOut(), commands.getTimeOut());
             startCommandTimeout(commands.getTimeOut());
             sendCommand(commands.toString());
-            for (int i = 0; i < commands.getTimeOut(); ++i) {
+            //for (int i = 0; i < commands.getTimeOut(); ++i) {
+            while (true) {
                 //condition.await();
                 Thread.sleep(1L);
                 if (bufferedReader.ready()) {
@@ -206,18 +196,16 @@ public abstract class Module implements InterfaceVersions {
             }
         }
         stopCommandTimeout();
-        //timer.cancel();
-        //timer.purge();
         return "";
     }
 
-    public void startCommandTimeout(int time){
+    private void startCommandTimeout(int time){
         stopCommandTimeout();
         commandTimeout = new Timer();
         commandTimeout.schedule(new TimerProcessCommandTimeout(), time, time);
     }
 
-    public void stopCommandTimeout(){
+    private void stopCommandTimeout(){
         if(commandTimeout != null){
             commandTimeout.cancel();
             commandTimeout.purge();
@@ -295,4 +283,6 @@ public abstract class Module implements InterfaceVersions {
     public boolean setModulePower(int power) {
         return Commands.CMD_POWER.setParam(power);
     }
+
+    public UUID getUuid() { return uuid; }
 }

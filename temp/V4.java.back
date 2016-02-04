@@ -1,14 +1,16 @@
 package com.konst.module;
 
+import com.konst.module.scale.ScaleModule;
+
 import java.util.Iterator;
 
 /** Класс весового модуля.
  * @version 4
  */
-class V4 extends Versions {
+class V4 extends ScaleModule {
 
-    public V4(ScaleModule module) {
-        super(module);
+    public V4(/*ScaleModule module*/) {
+        /*super(module);*/
     }
 
     /**Загрузить сохраненные параметры из модуля.

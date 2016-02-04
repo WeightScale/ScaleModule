@@ -1,6 +1,6 @@
 package com.konst.module;
 
-/**
+/** Обратный вызов при соеденении с модулем.
  * @author Kostya
  */
 public interface ConnectResultCallback {
@@ -10,7 +10,7 @@ public interface ConnectResultCallback {
      * @param what Результат соединения константа ResultConnect
      * @see Module.ResultConnect
      */
-    void resultConnect(Module.ResultConnect what);
+    void resultConnect(Module.ResultConnect what, String arg);
 
     /**Сообщения об ошибках соединения.
      * Используется при инициализаци метода init().

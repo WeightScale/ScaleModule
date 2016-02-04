@@ -1,12 +1,14 @@
 package com.konst.module;
 
+import com.konst.module.scale.ScaleModule;
+
 /**Класс весового модуля.
  * @version 1
  */
-class V1 extends Versions {
+class V1 extends ScaleModule {
 
-    public V1(ScaleModule module) {
-        super(module);
+    public V1(/*ScaleModule module*/) {
+        /*super(module);*/
     }
 
     @Override

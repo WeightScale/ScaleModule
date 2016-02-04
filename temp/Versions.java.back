@@ -11,80 +11,47 @@ import java.util.Set;
  * @author Kostya
  */
 abstract class Versions  {
-    final ScaleModule module;
-    /**
-     * Время выключения весов.
-     */
-    public int timeOff;
-    /**
-     * Калибровочный коэффициент a.
-     */
-    public float coefficientA;
-    /**
-     * Калибровочный коэффициент b.
-     */
-    public float coefficientB;
-    /**
-     * Максимальный вес для весов.
-     */
-    public int weightMax;
-    /**
-     * АЦП-фильтр (0-15).
-     */
-    public int filterADC;
-    /**
-     * Текущий вес.
-     */
-    public int weight;
-    /**
-     * Предельный вес взвешивания.
-     */
-    public int weightMargin;
-    /**
-     * Максимальное показание датчика.
-     */
-    public int limitTenzo;
-    /**
-     * Предельное показани датчика.
-     */
-    int marginTenzo;
+    private Versions version;
+    //final ScaleModule module;
+    /** Время выключения весов. */
+    private int timeOff;
+    /** Калибровочный коэффициент a. */
+    private float coefficientA;
+    /** Калибровочный коэффициент b. */
+    private float coefficientB;
+    /** Максимальный вес для весов. */
+    private int weightMax;
+    /** АЦП-фильтр (0-15). */
+    private int filterADC;
+    /** Текущий вес.  */
+    private int weight;
+    /** Предельный вес взвешивания. */
+    private int weightMargin;
+    /** Максимальное показание датчика. */
+    private int limitTenzo;
+    /** Предельное показани датчика. */
+    private int marginTenzo;
     private int speedPort;
-    /**
-     * Текущее показание датчика веса.
-     */
-    public int sensorTenzo;
-    /**
-     * Разница знечений между значение ноля до и после.
-     */
+    /** Текущее показание датчика веса. */
+    private int sensorTenzo;
+    /** Разница знечений между значение ноля до и после. */
     protected int offset;
-    /**
-     * Калибровочный коэффициент температуры.
-     */
+    /** Калибровочный коэффициент температуры. */
     protected float coefficientTemp;
-    /**
-     * Показание датчика веса с учетом offset.
-     */
+    /** Показание датчика веса с учетом offset.  */
     protected int sensorTenzoOffset;
-    /**
-     * Имя таблици google spreadsheet.
-     */
-    public String spreadsheet = "";
-    /**
-     * Имя акаунта google.
-     */
-    public String username = "";
-    /**
-     * Пароль акаунта google.
-     */
-    public String password = "";
-    /**
-     * Номер телефона админа в формате +38хххххххххх.
-     */
-    public String phone = "";
+    /** Имя таблици google spreadsheet. */
+    private String spreadsheet = "";
+    /** Имя акаунта google. */
+    private String username = "";
+    /** Пароль акаунта google. */
+    private String password = "";
+    /** Номер телефона админа в формате +38хххххххххх.  */
+    private String phone = "";
 
-    protected Versions(ScaleModule module) {
+    /*protected Versions(ScaleModule module) {
         this.module = module;
-    }
+    }*/
 
     /**Загружаем значения из весового модуля.
      * @throws Exception Ошибки при загрузке настроек из весового модуля.
@@ -131,39 +98,43 @@ abstract class Versions  {
 
     protected abstract boolean setPhone(String phone);
 
+    public Versions getVersion() { return version; }
+
+    public void setVersion(Versions version) { this.version = version; }
+
     /**Получаем значение установленого фильтра в АЦП.
      * @return значение от 1 до 15
      */
-    private String getFilterADC() {
+    /*private String getFilterADC() {
         return Commands.CMD_FILTER.getParam();
-    }
+    }*/
 
-    protected void loadFilterADC() throws Exception {
+    /*protected void loadFilterADC() throws Exception {
         filterADC = Integer.valueOf(getFilterADC());
         if (filterADC < 0 || filterADC > InterfaceVersions.MAX_ADC_FILTER) {
             if (!module.setModuleFilterADC(InterfaceVersions.DEFAULT_ADC_FILTER))
                 throw new ErrorModuleException("Фильтер АЦП не установлен в настройках");
             filterADC = InterfaceVersions.DEFAULT_ADC_FILTER;
         }
-    }
+    }*/
 
-    protected void loadTimeOff() throws Exception {
+    /*protected void loadTimeOff() throws Exception {
         timeOff = Integer.valueOf(module.getModuleTimeOff());
         if (timeOff < InterfaceVersions.MIN_TIME_OFF || timeOff > InterfaceVersions.MAX_TIME_OFF) {
             if (!module.setModuleTimeOff(InterfaceVersions.MIN_TIME_OFF))
                 throw new ErrorModuleException("Таймер выключения не установлен в настройках");
             timeOff = InterfaceVersions.MIN_TIME_OFF;
         }
-    }
+    }*/
 
-    protected void loadSpeedModule() throws Exception {
+    /*protected void loadSpeedModule() throws Exception {
         speedPort = Integer.valueOf(module.getModuleSpeedPort());
         if (speedPort < 1 || speedPort > 5) {
             if (!module.setModuleSpeedPort(5))
                 throw new ErrorModuleException("Скорость передачи не установлена в настройках");
             speedPort = 5;
         }
-    }
+    }*/
 
     protected int getMarginTenzo() {
         return marginTenzo;
@@ -187,7 +158,7 @@ abstract class Versions  {
         this.speedPort = speedPort;
     }
 
-    protected static class ErrorTerminalException extends Exception {
+    /*protected static class ErrorTerminalException extends Exception {
 
         private static final long serialVersionUID = -5686828330979812580L;
 
@@ -199,9 +170,9 @@ abstract class Versions  {
         public String getMessage() {
             return super.getMessage();
         }
-    }
+    }*/
 
-    protected static class ErrorModuleException extends Exception {
+    /*protected static class ErrorModuleException extends Exception {
 
         private static final long serialVersionUID = -5592575601519548599L;
 
@@ -213,7 +184,7 @@ abstract class Versions  {
         public String getMessage() {
             return super.getMessage();
         }
-    }
+    }*/
 
     /**A simple class that provides utilities to ease command line parsing.
      */
