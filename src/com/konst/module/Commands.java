@@ -19,7 +19,7 @@ public enum Commands {
     /** получить offset. */
     CMD_GET_OFFSET("GCO", 1000),
     /** установить offset. */
-    CMD_SET_OFFSET("SCO", 1000),
+    CMD_SET_OFFSET("SCO", 2000),
     /** получить передать заряд батареи. */
     CMD_BATTERY("GBT", 300),
     /** считать/записать данные температуры. */
@@ -54,7 +54,7 @@ public enum Commands {
     private final String name;
     private final int time;
     private String cmd;
-    private static InterfaceVersions interfaceVersions;
+    private static InterfaceModule interfaceModule;
 
     Commands(String n, int t){
         name = n;
@@ -64,39 +64,37 @@ public enum Commands {
     public String toString() { return cmd; }
 
     /** Получит время timeout комманды.
-     * @return Время в милисекундах.
-     */
+     * @return Время в милисекундах.  */
     public int getTimeOut(){ return time;}
 
+    /** Получить имя комманды.
+     * @return Имя комманды.  */
     public String getName(){return name;}
 
     /** Выполнить комманду получить данные.
-     * @return Данные выполненой комманды.
-     */
+     * @return Данные выполненой комманды. */
     public String getParam(){
         cmd = name;
-        return interfaceVersions.command(this);
+        return interfaceModule.command(this);
     }
 
     /** Выполнить комманду установить данные.
      * @param param Данные для установки.
-     * @return true - комманда выполнена.
-     */
+     * @return true - комманда выполнена.  */
     public boolean setParam(String param){
         cmd = name + param;
-        return interfaceVersions.command(this).equals(name);
+        return interfaceModule.command(this).equals(name);
     }
 
     /** Выполнить комманду установить данные.
      * @param param Данные для установки.
-     * @return true - комманда выполнена.
-     */
+     * @return true - комманда выполнена.  */
     public boolean setParam(int param){
         cmd = name + param;
-        return interfaceVersions.command(this).equals(name);
+        return interfaceModule.command(this).equals(name);
     }
 
-    public static void setInterfaceCommand(InterfaceVersions i){
-        interfaceVersions = i;
+    public static void setInterfaceCommand(InterfaceModule i){
+        interfaceModule = i;
     }
 }

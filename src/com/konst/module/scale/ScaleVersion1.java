@@ -15,7 +15,7 @@ import com.konst.module.ErrorModuleException;
 /**
  * @author Kostya
  */
-public class ScaleVersion1 implements InterfaceScaleVersion {
+public class ScaleVersion1 extends ScaleVersion {
     private ScaleModule scaleModule;
     /** Текущий вес.  */
     private int weight;
@@ -61,10 +61,10 @@ public class ScaleVersion1 implements InterfaceScaleVersion {
         return Math.abs(weight) < scaleModule.getWeightMargin();
     }
 
-   /* @Override
-    public int getSensor() {
-        return sensorTenzo;
-    }*/
+    @Override
+    boolean setOffsetScale() {
+        return Commands.CMD_SET_OFFSET.getParam().equals(Commands.CMD_SET_OFFSET.getName());
+    }
 
     @Override
     public synchronized int updateWeight() {
@@ -85,6 +85,11 @@ public class ScaleVersion1 implements InterfaceScaleVersion {
 
     @Override
     public int getWeight() { return weight; }
+
+    @Override
+    int getSensor() {
+        return scaleModule.getSensorTenzo();
+    }
 
     @Override
     public int getMarginTenzo() { return 0; }

@@ -21,7 +21,7 @@ import java.util.Set;
 /**
  * @author Kostya
  */
-public class ScaleVersion4 implements InterfaceScaleVersion {
+public class ScaleVersion4 extends ScaleVersion {
     private final ScaleModule scaleModule;
     /** Показание датчика веса с учетом offset.  */
     private int sensorTenzoOffset;
@@ -84,13 +84,25 @@ public class ScaleVersion4 implements InterfaceScaleVersion {
     @Override
     public boolean isLimit() {
         //return Math.abs(sensorTenzoOffset + offset) > scaleModule.getLimitTenzo();
-        return Math.abs(scaleModule.getSensorTenzo()) > scaleModule.getLimitTenzo();
+        return Math.abs(getSensor()) > scaleModule.getLimitTenzo();
     }
 
     @Override
     public boolean isMargin() {
         //return Math.abs(sensorTenzoOffset + offset) > marginTenzo;
-        return Math.abs(scaleModule.getSensorTenzo()) > marginTenzo;
+        return Math.abs(getSensor()) > marginTenzo;
+    }
+
+    @Override
+    boolean setOffsetScale() {
+        try {
+            //int offset = Integer.valueOf(Commands.CMD_GET_OFFSET.getParam());
+            if(Commands.CMD_SET_OFFSET.getParam().equals(Commands.CMD_SET_OFFSET.getName())){
+                this.offset = Integer.valueOf(Commands.CMD_GET_OFFSET.getParam());
+                return true;
+            }
+        }catch (Exception e){}
+        return false;
     }
 
     /*@Override
@@ -127,6 +139,11 @@ public class ScaleVersion4 implements InterfaceScaleVersion {
     public int getWeight() { return weight; }
 
     @Override
+    int getSensor() {
+        return offset + sensorTenzoOffset;
+    }
+
+    @Override
     public int getMarginTenzo() { return marginTenzo; }
 
     @Override
@@ -141,7 +158,7 @@ public class ScaleVersion4 implements InterfaceScaleVersion {
     }*/
 
     /**Проверка данных полученых от модуля.
-     * Формат параметра данных: [[{@link InterfaceScaleVersion#CMD_DATA_CFA}=[значение]] [{@link InterfaceScaleVersion#CMD_DATA_WGM}=[значение]] [{@link InterfaceScaleVersion#CMD_DATA_LMT}=[значение]]]
+     * Формат параметра данных: [[{@link ScaleVersion#CMD_DATA_CFA}=[значение]] [{@link ScaleVersion#CMD_DATA_WGM}=[значение]] [{@link ScaleVersion#CMD_DATA_LMT}=[значение]]]
      * @param d Данные
      * @throws Exception Данные не правельные.
      * @see ScaleVersion4#load()

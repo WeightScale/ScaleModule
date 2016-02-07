@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Kostya
  */
-public abstract class Module implements InterfaceVersions {
+public abstract class Module implements InterfaceModule {
     /** Bluetooth устройство модуля весов. */
     protected BluetoothDevice device;
     /** Bluetooth адаптер терминала. */
@@ -160,7 +160,7 @@ public abstract class Module implements InterfaceVersions {
      *            Если есть парамет то обрабатывается параметр, иначе команда возвращяет параметр.
      * @return Имя команды или параметр. Если вернулась имя команды то посланый параметр обработан удачно. while((line = br.readLine()) != null)
      * Если вернулась пустая строка то команда не выполнена.
-     * @see InterfaceVersions
+     * @see InterfaceModule
      */
     @Override
     public synchronized String command(Commands commands) {
@@ -169,8 +169,8 @@ public abstract class Module implements InterfaceVersions {
             //timer.schedule(new TimerProcessCommandTimeout(), commands.getTimeOut(), commands.getTimeOut());
             startCommandTimeout(commands.getTimeOut());
             sendCommand(commands.toString());
-            //for (int i = 0; i < commands.getTimeOut(); ++i) {
-            while (true) {
+            for (int i = 0; i < commands.getTimeOut(); ++i) {
+            //while (true) {
                 //condition.await();
                 Thread.sleep(1L);
                 if (bufferedReader.ready()) {
@@ -178,8 +178,6 @@ public abstract class Module implements InterfaceVersions {
                     if(substring == null)
                         continue;
                     stopCommandTimeout();
-                    //timer.cancel();
-                    //timer.purge();
                     if (substring.startsWith(commands.getName())){
                         substring = substring.replace(commands.getName(),"");
                         return substring.isEmpty() ? commands.getName() : substring;
@@ -202,7 +200,7 @@ public abstract class Module implements InterfaceVersions {
     private void startCommandTimeout(int time){
         stopCommandTimeout();
         commandTimeout = new Timer();
-        commandTimeout.schedule(new TimerProcessCommandTimeout(), time, time);
+        commandTimeout.schedule(new TimerProcessCommandTimeout(), time+500);
     }
 
     private void stopCommandTimeout(){
